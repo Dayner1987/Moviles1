@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model roles {
+  RolesID Int    @id @default(autoincrement())
+  NameRol String @db.VarChar(45)
+
+  users users[]
+}
+
+model users {
+  clientID      Int     @default(autoincrement())
+  Roles_RolesID Int
+  Name1         String  @db.VarChar(20)
+  Name2         String? @db.VarChar(20)
+  LastName1     String  @db.VarChar(20)
+  LastName2     String? @db.VarChar(20)
+  CI            Int
+  Address       String  @db.VarChar(30)
+  Password      String  @db.VarChar(100)
+
+  roles  roles   @relation(fields: [Roles_RolesID], references: [RolesID])
+  orders orders[]
+
+  @@id([clientID, Roles_RolesID])
+  @@index([Roles_RolesID], map: "fk_Users_Roles_idx")
+}
+
+model categories {
+  CategoriesID    Int    @id
+  Name_categories String @db.VarChar(45)
+
+  products products[]
+}
+
+model products {
+  ProductsID              Int    @default(autoincrement())
+  Categories_CategoriesID Int
+  Name_product            String @db.VarChar(45)
+  Price                   Float  @db.Float
+  Description             String @db.VarChar(45)
+  Amount                  Int
+
+  categories categories @relation(fields: [Categories_CategoriesID], references: [CategoriesID])
+  orders     orders[]
+
+  @@id([ProductsID, Categories_CategoriesID])
+  @@index([Categories_CategoriesID], map: "fk_Products_Categories1_idx")
+}
+
+model orders {
+  idOrders                         Int      @default(autoincrement())
+  Products_ProductsID              Int
+  Products_Categories_CategoriesID Int
+  Users_clientID                   Int
+  Users_Roles_RolesID              Int
+  Date_order                       DateTime @db.Date
+  Status_order                     String   @db.VarChar(45)
+  United_price                     Float    @db.Float
+
+  products products @relation(fields: [Products_ProductsID, Products_Categories_CategoriesID], references: [ProductsID, Categories_CategoriesID])
+  users    users    @relation(fields: [Users_clientID, Users_Roles_RolesID], references: [clientID, Roles_RolesID])
+
+  @@id([idOrders, Products_ProductsID, Products_Categories_CategoriesID, Users_clientID, Users_Roles_RolesID])
+  @@index([Products_ProductsID, Products_Categories_CategoriesID], map: "fk_Order_Products1_idx")
+  @@index([Users_clientID, Users_Roles_RolesID], map: "fk_Order_Users1_idx")
+}
