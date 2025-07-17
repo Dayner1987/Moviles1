@@ -1,66 +1,63 @@
+import express from 'express';
 import { PrismaClient } from './generated/prisma/index.js';
+
 const prisma = new PrismaClient();
+const app = express();
+app.use(express.json());
 
-async function main() {
-  // Insertar un usuario
-  await prisma.users.create({
-    data: {
-      Roles_RolesID: 1, 
-      Name1: "Juan",
-      LastName1: "Pérez",
-      CI: 123456,
-      Address: "Av. Central",
-      Password: "1234"
-    }
-  });
+// 1.todos los productos 
+app.get('/products', async (req, res) => {
+  try {
+    const products = await prisma.products.findMany();
+    res.json(products);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
-  // Insertar una categoria
-  await prisma.categories.create({
-    data: {
-      CategoriesID: 1,
-      Name_categories: "Bebidas"
-    }
-  });
+// 2. Crear un nuevo usuario (cliente)
+app.post('/users', async (req, res) => {
+  try {
+    const { Roles_RolesID, Name1, LastName1, CI, Address, Password } = req.body;
+    const user = await prisma.users.create({
+      data: { Roles_RolesID, Name1, LastName1, CI, Address, Password }
+    });
+    res.status(201).json(user);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
-  // Insertar un producto
-  await prisma.products.create({
-    data: {
-      Categories_CategoriesID: 1, 
-      Name_product: "Coca Cola",
-      Price: 5.0,
-      Description: "Bebida gaseosa",
-      Amount: 100
-    }
-  });
-
-  // Insertar un pedido
-  await prisma.orders.create({
-    data: {
-      Products_ProductsID: 1,
-      Products_Categories_CategoriesID: 1,
-      Users_clientID: 1,
-      Users_Roles_RolesID: 1,
-      Date_order: new Date(),
-      Status_order: "En camino",
-      United_price: 5.0
-    }
-  });
-
-  // Consultar pedidos con relaciones
-  const orders = await prisma.orders.findMany({
-    include: {
-      users: {
-        include: { roles: true },
+// 3. Crear un pedido (order)
+app.post('/orders', async (req, res) => {
+  try {
+    const {
+      Products_ProductsID,
+      Products_Categories_CategoriesID,
+      Users_clientID,
+      Users_Roles_RolesID,
+      Status_order,
+      United_price,
+    } = req.body;
+    const order = await prisma.orders.create({
+      data: {
+        Products_ProductsID,
+        Products_Categories_CategoriesID,
+        Users_clientID,
+        Users_Roles_RolesID,
+        Date_order: new Date(),
+        Status_order,
+        United_price,
       },
-      products: {
-        include: { categories: true },
-      },
-    },
-  });
+    });
+    res.status(201).json(order);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
-  console.dir(orders, { depth: null });
-}
-
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+// Iniciar servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
