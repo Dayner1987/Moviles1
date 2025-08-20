@@ -22,6 +22,7 @@ model users {
   LastName1     String   @db.VarChar(20)
   LastName2     String?  @db.VarChar(20)
   CI            Int      @unique
+  Email         String   @unique @db.VarChar(50) 
   Address       String   @db.VarChar(30)
   Password      String   @db.VarChar(600)
   orders        orders[]

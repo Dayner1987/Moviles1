@@ -1,59 +1,59 @@
-// (tabs)/login.tsx
+// app/(tabs)/login.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
-import { TabsStackParamList } from './types';
-
-type LoginScreenNavigationProp = NativeStackNavigationProp<TabsStackParamList, 'Login'>;
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import { router } from 'expo-router';
 
 export default function Login() {
-  const navigation = useNavigation<LoginScreenNavigationProp>();
   const [ci, setCI] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    if (!ci || !password) {
-      Alert.alert('Error', 'CI y contraseña son obligatorios');
-      return;
+    if (ci === 'cliente' && password === '1234') {
+      router.push('/ClientHome');
+    } else if (ci === 'empleado' && password === '1234') {
+      router.push('/EmployeeHome');
+    } else if (ci === 'admin' && password === '1234') {
+      router.push('/AdminHome');
+    } else {
+      Alert.alert('Error', 'Credenciales incorrectas');
     }
-    // Aquí puedes hacer tu llamada al backend
-    Alert.alert('Login exitoso', `CI: ${ci}`);
-    // Ejemplo: después de login, navegar a Home o a otra pantalla
-    // navigation.navigate('Home');
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>CI:</Text>
+      {/* Imagen de ejemplo */}
+      <Image
+        source={{ uri: 'https://th.bing.com/th/id/OIP.cSJJmB2bmKjacco5lutZqwHaHa?w=215&h=215&c=7&r=0&o=7&pid=1.7&rm=3' }}
+        style={styles.avatar}
+      />
+
+      <Text style={styles.title}>Iniciar Sesión</Text>
+
       <TextInput
+        placeholder="CI o Usuario"
         style={styles.input}
-        keyboardType="numeric"
         value={ci}
         onChangeText={setCI}
-        placeholder="Ingresa tu CI"
       />
-      <Text style={styles.label}>Contraseña:</Text>
       <TextInput
+        placeholder="Contraseña"
         style={styles.input}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
-        placeholder="Ingresa tu contraseña"
       />
-      <Button title="Ingresar" onPress={handleLogin} />
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
+        <Text style={styles.buttonText}>Ingresar</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, flex: 1, justifyContent: 'center' },
-  label: { marginBottom: 5, fontWeight: 'bold' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#333',
-    padding: 10,
-    marginBottom: 15,
-    borderRadius: 5,
-  },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  avatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 20 },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
+  input: { width: '100%', padding: 10, borderWidth: 1, borderColor: '#ccc', borderRadius: 6, marginBottom: 15 },
+  button: { backgroundColor: '#32CD32', padding: 12, borderRadius: 6, width: '100%', alignItems: 'center' },
+  buttonText: { color: '#fff', fontWeight: 'bold' },
 });

@@ -1,6 +1,9 @@
-// (tabs)/types.ts
-export type TabsStackParamList = {
-  Home: undefined;     // Pantalla de inicio
-  Login: undefined;    // Pantalla de login
-  Register: undefined; // Pantalla de registro
+// types.ts
+export type TabsStackParamList = { 
+  Home: undefined;
+  Login: undefined;
+  Register: undefined;
+  ClientHome: undefined;
+  EmployeeHome: undefined; 
+  AdminHome: undefined;// nueva pantalla empleado
 };

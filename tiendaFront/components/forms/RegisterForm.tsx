@@ -1,93 +1,68 @@
-// components/forms/RegisterForm.tsx
-import React, { useState } from 'react';
-import { View, TextInput, Button, Text, Alert, StyleSheet, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, StyleSheet } from 'react-native';
 
-const RegisterForm: React.FC = () => {
-  const [form, setForm] = useState({
-    Name1: '',
-    Name2: '',
-    LastName1: '',
-    LastName2: '',
-    CI: '',
-    Address: '',
-    Password: '',
-  });
+interface Props {
+  name: string;
+  setName: (val: string) => void;
+  lastName1: string;
+  setLastName1: (val: string) => void;
+  lastName2: string;
+  setLastName2: (val: string) => void;
+  email: string;
+  setEmail: (val: string) => void;
+  onSubmit: () => void;
+}
 
-  const handleChange = (field: string, value: string) => {
-    setForm({ ...form, [field]: value });
-  };
-
-  const handleRegister = async () => {
-    const { Name1, LastName1, CI, Address, Password } = form;
-
-    // Validación básica
-    if (!Name1 || !LastName1 || !CI || !Address || !Password) {
-      Alert.alert('Error', 'Completa todos los campos obligatorios');
-      return;
-    }
-
-    try {
-      const response = await fetch('http://TU_BACKEND_API/registro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          CI: parseInt(form.CI),
-          Roles_RolesID: 2, // puedes cambiarlo según tus roles
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        Alert.alert('Éxito', 'Usuario registrado');
-      } else {
-        Alert.alert('Error', data.message || 'No se pudo registrar');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Error de red o del servidor');
-    }
-  };
-
+const RegisterForm: React.FC<Props> = ({
+  name,
+  setName,
+  lastName1,
+  setLastName1,
+  lastName2,
+  setLastName2,
+  email,
+  setEmail,
+  onSubmit,
+}) => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text>Nombre:</Text>
-      <TextInput style={styles.input} value={form.Name1} onChangeText={(text) => handleChange('Name1', text)} />
+      <Image
+        source={{ uri: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png' }}
+        style={styles.avatar}
+      />
 
-      <Text>Segundo Nombre:</Text>
-      <TextInput style={styles.input} value={form.Name2} onChangeText={(text) => handleChange('Name2', text)} />
+      <Text style={styles.label}>Nombre(s):</Text>
+      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Ingrese su nombre" />
 
-      <Text>Apellido:</Text>
-      <TextInput style={styles.input} value={form.LastName1} onChangeText={(text) => handleChange('LastName1', text)} />
+      <Text style={styles.label}>Apellido Paterno:</Text>
+      <TextInput style={styles.input} value={lastName1} onChangeText={setLastName1} placeholder="Apellido paterno" />
 
-      <Text>Segundo Apellido:</Text>
-      <TextInput style={styles.input} value={form.LastName2} onChangeText={(text) => handleChange('LastName2', text)} />
+      <Text style={styles.label}>Apellido Materno:</Text>
+      <TextInput style={styles.input} value={lastName2} onChangeText={setLastName2} placeholder="Apellido materno" />
 
-      <Text>CI:</Text>
-      <TextInput style={styles.input} keyboardType="numeric" value={form.CI} onChangeText={(text) => handleChange('CI', text)} />
+      <Text style={styles.label}>Correo Electrónico:</Text>
+      <TextInput
+        style={styles.input}
+        value={email}
+        onChangeText={setEmail}
+        placeholder="ejemplo@correo.com"
+        keyboardType="email-address"
+      />
 
-      <Text>Dirección:</Text>
-      <TextInput style={styles.input} value={form.Address} onChangeText={(text) => handleChange('Address', text)} />
-
-      <Text>Contraseña:</Text>
-      <TextInput style={styles.input} secureTextEntry value={form.Password} onChangeText={(text) => handleChange('Password', text)} />
-
-      <Button title="Registrar" onPress={handleRegister} />
+      <TouchableOpacity style={styles.button} onPress={onSubmit}>
+        <Text style={styles.buttonText}>Registrarse</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#333',
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 5,
-  },
-});
-
 export default RegisterForm;
+
+const styles = StyleSheet.create({
+  container: { padding: 20, backgroundColor: '#f5f5f5', alignItems: 'center', flexGrow: 1 },
+  avatar: { width: 100, height: 100, marginBottom: 20 },
+  label: { alignSelf: 'flex-start', marginLeft: 10, marginBottom: 5, fontWeight: '600', color: '#333' },
+  input: { width: '100%', padding: 12, marginBottom: 15, borderRadius: 10, borderWidth: 1, borderColor: '#bbb', backgroundColor: '#fff' },
+  button: { width: '100%', padding: 15, borderRadius: 10, backgroundColor: '#6200EE', alignItems: 'center', marginTop: 10 },
+  buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+});
