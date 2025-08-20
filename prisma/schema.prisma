@@ -9,43 +9,76 @@ datasource db {
 }
 
 model roles {
-  RolesID Int    @id @default(autoincrement())
-  NameRol String @db.VarChar(45)
+  RolesID Int     @id @default(autoincrement())
+  NameRol String  @db.VarChar(45)
+  users   users[]
 }
 
 model users {
-  clientID      Int     @id @default(autoincrement())
+  clientID      Int      @id @default(autoincrement())
   Roles_RolesID Int
-  Name1         String  @db.VarChar(20)
-  Name2         String? @db.VarChar(20)
-  LastName1     String  @db.VarChar(20)
-  LastName2     String? @db.VarChar(20)
-  CI            Int
-  Address       String  @db.VarChar(30)
-  Password      String  @db.VarChar(100)
+  Name1         String   @db.VarChar(20)
+  Name2         String?  @db.VarChar(20)
+  LastName1     String   @db.VarChar(20)
+  LastName2     String?  @db.VarChar(20)
+  CI            Int      @unique
+  Address       String   @db.VarChar(30)
+  Password      String   @db.VarChar(600)
+  orders        orders[]
+  roles         roles    @relation(fields: [Roles_RolesID], references: [RolesID], onDelete: NoAction, onUpdate: NoAction, map: "fk_Users_Roles")
+
+  @@index([Roles_RolesID], map: "fk_Users_Roles_idx")
 }
 
 model categories {
-  CategoriesID    Int    @id @default(autoincrement())
-  Name_categories String @db.VarChar(45)
+  CategoriesID    Int        @id @default(autoincrement())
+  Name_categories String     @db.VarChar(45)
+  products        products[]
 }
 
 model products {
-  ProductsID              Int    @id @default(autoincrement())
-  Categories_CategoriesID Int
-  Name_product            String @db.VarChar(45)
-  Price                   Float  @db.Float
-  Description             String @db.VarChar(45)
-  Amount                  Int
+  ProductsID   Int        @id @default(autoincrement())
+  CategoryID   Int
+  SupplierID   Int
+  Name_product String     @db.VarChar(45)
+  Price        Float      @db.Float
+  Description  String     @db.VarChar(45)
+  Amount       Int
+  orders       orders[]
+
+  categories   categories @relation(fields: [CategoryID], references: [CategoriesID], onDelete: NoAction, onUpdate: NoAction, map: "fk_Products_Categories")
+  suppliers    suppliers  @relation(fields: [SupplierID], references: [idSuppliers], onDelete: NoAction, onUpdate: NoAction, map: "fk_Products_Suppliers")
+
+  @@index([CategoryID], map: "fk_Products_Categories_idx")
+  @@index([SupplierID], map: "fk_Products_Suppliers_idx")
 }
 
 model orders {
-  idOrders                         Int      @id @default(autoincrement())
-  Products_ProductsID              Int
-  Products_Categories_CategoriesID Int
-  Users_clientID                   Int
-  Users_Roles_RolesID              Int
-  Date_order                       DateTime @db.Date
-  Status_order                     String   @db.VarChar(45)
-  United_price                     Float    @db.Float
+  OrdersID       Int           @id @default(autoincrement())
+  ProductID      Int
+  UserID         Int
+  Date_order     DateTime      @db.Date
+  United_price   Float         @db.Float
+  StatusOrderID  Int
+
+  products       products      @relation(fields: [ProductID], references: [ProductsID], map: "fk_Orders_Products")
+  users          users         @relation(fields: [UserID], references: [clientID], map: "fk_Orders_Users")
+  order_status   order_status  @relation(fields: [StatusOrderID], references: [idEstado], map: "fk_Orders_Status")
+
+  @@index([ProductID], map: "fk_Orders_Products_idx")
+  @@index([UserID], map: "fk_Orders_Users_idx")
+  @@index([StatusOrderID], map: "fk_Orders_Status_idx")
+}
+
+model order_status {
+  idEstado Int     @id @default(autoincrement())
+  estado   Boolean @default(false)
+  orders   orders[]
+}
+
+model suppliers {
+  idSuppliers Int       @id @default(autoincrement())
+  name        String    @db.VarChar(45)
+  phone       Int
+  products    products[]
 }

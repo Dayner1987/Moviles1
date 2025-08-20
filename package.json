@@ -1,18 +1,24 @@
 {
   "devDependencies": {
-    "prisma": "^6.12.0"
+    "@types/bcrypt": "^6.0.0",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.1.0",
+    "prisma": "^6.12.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "name": "moviles1",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "index.ts",
   "dependencies": {
     "@prisma/client": "^6.12.0",
+    "bcrypt": "^6.0.0",
+    "express": "^5.1.0",
     "jiti": "^2.4.2"
   },
   "scripts": {
-  "dev": "node index.js"
-}
-,
+    "dev": "ts-node index.ts"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
