@@ -1,0 +1,1 @@
+export const API:string="http://10.122.24.181:3000";

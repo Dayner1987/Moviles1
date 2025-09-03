@@ -40,19 +40,19 @@ model categories {
 model products {
   ProductsID   Int        @id @default(autoincrement())
   CategoryID   Int
-  SupplierID   Int
+
   Name_product String     @db.VarChar(45)
   Price        Float      @db.Float
   Description  String     @db.VarChar(45)
   Amount       Int
+  imageUri     String?    @db.VarChar(255)  // <-- nuevo campo opcional para la ruta de la imagen
   orders       orders[]
 
   categories   categories @relation(fields: [CategoryID], references: [CategoriesID], onDelete: NoAction, onUpdate: NoAction, map: "fk_Products_Categories")
-  suppliers    suppliers  @relation(fields: [SupplierID], references: [idSuppliers], onDelete: NoAction, onUpdate: NoAction, map: "fk_Products_Suppliers")
-
   @@index([CategoryID], map: "fk_Products_Categories_idx")
-  @@index([SupplierID], map: "fk_Products_Suppliers_idx")
+ 
 }
+
 
 model orders {
   OrdersID       Int           @id @default(autoincrement())
@@ -75,11 +75,4 @@ model order_status {
   idEstado Int     @id @default(autoincrement())
   estado   Boolean @default(false)
   orders   orders[]
-}
-
-model suppliers {
-  idSuppliers Int       @id @default(autoincrement())
-  name        String    @db.VarChar(45)
-  phone       Int
-  products    products[]
 }

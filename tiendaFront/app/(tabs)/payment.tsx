@@ -1,17 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  Image,
-  Platform
-} from 'react-native';
-import { Picker } from '@react-native-picker/picker';// npm inst all @react-native-picker/picker
+import {View,Text,StyleSheet,FlatList,TouchableOpacity,TextInput,Alert,Image,Platform} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useCarrito } from '../../hooks/UseCarrito';
+import { API } from '../ip/IpDirection';
 
 export default function Payment() {
   const { carrito, limpiarCarrito } = useCarrito();
@@ -24,38 +15,50 @@ export default function Payment() {
   const [anioExp, setAnioExp] = useState('');
   const [cvv, setCvv] = useState('');
 
-  // Datos dirección
+  // Dirección
   const [calle, setCalle] = useState('');
   const [codigoPostal, setCodigoPostal] = useState('');
   const [ciudad, setCiudad] = useState('Cochabamba');
 
   // Calcular total
-  const total = carrito.reduce((sum, item) => {
-    const precioNum = parseFloat(item.precio.replace(/[^\d.]/g, '')) || 0;
-    return sum + precioNum;
-  }, 0);
+  const total = carrito.reduce((sum, item) => sum + item.Price, 0);
+const handlePay = async () => {
+  if (
+    metodoPago === 'tarjeta' &&
+    (!nombreTarjeta || !numTarjeta || !mesExp || !anioExp || !cvv || !calle || !codigoPostal || !ciudad)
+  ) {
+    Alert.alert('Error', 'Completa todos los datos de la tarjeta y dirección');
+    return;
+  }
 
-  const handlePay = () => {
-    if (metodoPago === 'tarjeta' && (!nombreTarjeta || !numTarjeta || !mesExp || !anioExp || !cvv || !calle || !codigoPostal || !ciudad)) {
-      Alert.alert('Error', 'Completa todos los datos de la tarjeta y dirección');
-      return;
-    }
-
-    const factura = {
-      id: Math.floor(Math.random() * 1000000),
-      productos: carrito,
-      total,
-      metodo: metodoPago === 'tarjeta' ? 'Tarjeta de crédito' : 'QR',
-      fecha: new Date().toLocaleString(),
-      direccion: { calle, codigoPostal, ciudad }
-    };
-
-    Alert.alert(
-      'Pago realizado',
-      `Factura #${factura.id}\nMétodo: ${factura.metodo}\nTotal: ${factura.total} Bs\nCiudad: ${factura.direccion.ciudad}`,
-      [{ text: 'Aceptar', onPress: () => limpiarCarrito() }]
-    );
+  const factura = {
+    id: Math.floor(Math.random() * 1000000),
+    productos: carrito.map(item => ({
+      name: item.Name_product,
+      price: item.Price,
+      quantity: 1,
+      subtotal: item.Price,
+    })),
+    total,
+    metodo: metodoPago === 'tarjeta' ? 'Tarjeta de crédito' : 'QR',
+    fecha: new Date().toLocaleString(),
+    direccion: { calle, codigoPostal, ciudad }
   };
+
+  
+
+  try {
+    await fetch(`${API}/enviar-factura`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    Alert.alert('Pago realizado', `Factura #${factura.id} enviada al correo`, [{ text: 'Aceptar', onPress: limpiarCarrito }]);
+  } catch (err) {
+    Alert.alert('Error', 'No se pudo enviar la factura al correo');
+  }
+};
+
 
   return (
     <View style={styles.container}>
@@ -165,11 +168,11 @@ export default function Payment() {
       ) : (
         <FlatList
           data={carrito}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.ProductsID.toString()}
           renderItem={({ item }) => (
             <View style={styles.cartItem}>
               <Text>
-                {item.nombre} - {item.precio}
+                {item.Name_product} - {item.Price} Bs
               </Text>
             </View>
           )}
@@ -186,7 +189,7 @@ export default function Payment() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5', paddingTop: 20 },
+  container: { flex: 1, backgroundColor: '#f5f5f5', paddingTop: 20, marginBottom: 50, margin: 10 },
   title: { fontSize: 22, fontWeight: 'bold', marginHorizontal: 20, marginBottom: 10 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', marginHorizontal: 20, marginVertical: 10 },
   buttonRow: { flexDirection: 'row', marginHorizontal: 20 },
@@ -204,9 +207,26 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 10, marginBottom: 10 },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   halfInput: { flex: 1, marginRight: 10 },
-  pickerContainer: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, marginBottom: 10, overflow: 'hidden' },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    marginBottom: 10,
+    overflow: 'hidden'
+  },
   cartItem: { marginHorizontal: 20, paddingVertical: 4 },
   totalText: { fontSize: 16, fontWeight: 'bold', marginHorizontal: 20, marginVertical: 10 },
-  payButton: { marginHorizontal: 20, backgroundColor: '#FF8C00', padding: 12, borderRadius: 6, alignItems: 'center', marginBottom: 20 },
-  payButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  payButton: {
+    marginHorizontal: 20,
+    backgroundColor: '#FF8C00',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginBottom: 20
+  },
+  payButtonText: { 
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });

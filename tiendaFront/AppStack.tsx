@@ -1,4 +1,3 @@
-// AppStack.tsx
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Home from './app/(tabs)/index';
@@ -9,20 +8,41 @@ import ClientHome from './app/(tabs)/ClientHome';
 import EmployeeHome from './app/(tabs)/EmployeeHome';
 import AdminHome from './app/(tabs)/AdminHome';
 
+// importa tus nuevas pantallas (todas con export default)
+import AddProducts from './app/(tabs)/operations/AddProducts';
+import ManageProducts from './app/(tabs)/operations/ManageProducts';
+import Orders from './app/(tabs)/operations/Orders';
+import Search from './app/(tabs)/operations/Search';
+
+import NewProducts from './app/(tabs)/opAdmin/NewProducts';
+import NewUsers from './app/(tabs)/opAdmin/NewUsers';
+
+
 const Stack = createNativeStackNavigator<TabsStackParamList>();
 
 export default function AppStack() {
   return (
     <Stack.Navigator
       initialRouteName="Home"
-      screenOptions={{ headerShown: true }} // Puedes poner false si no quieres headers
+      screenOptions={{ headerShown: true }}
     >
+      {/* pantallas principales */}
       <Stack.Screen name="Home" component={Home} />
       <Stack.Screen name="Login" component={Login} />
-      <Stack.Screen name="Register" component={Register} />     
+      <Stack.Screen name="Register" component={Register} />
       <Stack.Screen name="ClientHome" component={ClientHome} />
-       <Stack.Screen name="EmployeeHome" component={EmployeeHome} />
+      <Stack.Screen name="EmployeeHome" component={EmployeeHome} />
       <Stack.Screen name="AdminHome" component={AdminHome} />
+
+      {/* operaciones */}
+      <Stack.Screen name="AddProducts" component={AddProducts} />
+      <Stack.Screen name="ManageProducts" component={ManageProducts} />
+      <Stack.Screen name="Orders" component={Orders} />
+      <Stack.Screen name="Search" component={Search} />
+
+      <Stack.Screen name="NewUsers" component={NewUsers} />
+      <Stack.Screen name="NewProducts" component={NewProducts} />
+    
     </Stack.Navigator>
   );
 }

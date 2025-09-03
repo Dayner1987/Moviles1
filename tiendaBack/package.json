@@ -2,7 +2,9 @@
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.3",
+    "@types/multer": "^2.0.0",
     "@types/node": "^24.1.0",
+    "@types/nodemailer": "^7.0.1",
     "prisma": "^6.12.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
@@ -14,7 +16,9 @@
     "@prisma/client": "^6.12.0",
     "bcrypt": "^6.0.0",
     "express": "^5.1.0",
-    "jiti": "^2.4.2"
+    "jiti": "^2.4.2",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.5"
   },
   "scripts": {
     "dev": "ts-node index.ts"

@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router'; // Importar router para el back
 
 interface Props {
   ci: string;
@@ -12,19 +14,40 @@ interface Props {
 const LoginForm: React.FC<Props> = ({ ci, setCI, password, setPassword, onSubmit }) => {
   return (
     <View style={styles.container}>
-      {/* Imagen arriba del formulario */}
+      {/* Navbar */}
+      <LinearGradient
+        colors={['#9C27B0', '#6200EE']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.navbar}
+      >
+        <View style={styles.navbarRow}>
+          {/* Botón de retroceso en recuadro */}
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
+            <View style={styles.backCircle}>
+              <Text style={styles.backText}>←</Text>
+            </View>
+          </TouchableOpacity>
+
+          <Text style={styles.navbarTitle}>HairLux</Text>
+
+          {/* Espacio para equilibrar el navbar */}
+          <View style={{ width: 40 }} />
+        </View>
+      </LinearGradient>
+
+      {/* Imagen */}
       <Image
-        source={{ uri: 'https://th.bing.com/th?q=Perfil+Sin+Foto+Facebook&w=120&h=120&c=1&rs=1&qlt=70&o=7&cb=1&pid=InlineBlock&rm=3&mkt=es-XL&cc=BO&setlang=es&adlt=moderate&t=1&mw=247' }} 
+        source={{ uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ5vNoBbjGdp2SSLCFtOjHlXAolAkkZJ3_t6w&s' }}
         style={styles.avatar}
       />
 
-      <Text style={styles.label}>CI:</Text>
+      <Text style={styles.label}>Correo Electronico o CI:</Text>
       <TextInput
         style={styles.input}
-        keyboardType="numeric"
         value={ci}
         onChangeText={setCI}
-        placeholder="Ingresa tu CI"
+        placeholder="Correo/ci"
       />
 
       <Text style={styles.label}>Contraseña:</Text>
@@ -37,7 +60,14 @@ const LoginForm: React.FC<Props> = ({ ci, setCI, password, setPassword, onSubmit
       />
 
       <TouchableOpacity style={styles.button} onPress={onSubmit}>
-        <Text style={styles.buttonText}>Ingresar</Text>
+        <LinearGradient
+          colors={['#9C27B0', '#6200EE']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradient}
+        >
+          <Text style={styles.buttonText}>Ingresar</Text>
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
@@ -46,11 +76,53 @@ const LoginForm: React.FC<Props> = ({ ci, setCI, password, setPassword, onSubmit
 export default LoginForm;
 
 const styles = StyleSheet.create({
-  container: { padding: 20, flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' },
+  container: { padding: 20, flex: 1, backgroundColor: '#f5f5f5', marginTop:40 },
+  navbar: {
+    width: '100%',
+    height: 60,
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#6200EE',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    marginBottom: 20,
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
+  },
+  navbarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+  },
+  navbarTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
+
+  // Botón de retroceso
+  backButton: { justifyContent: 'center', alignItems: 'center' },
+  backCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  backText: { color: '#6200EE', fontSize: 24, fontWeight: 'bold' },
+
   avatar: {
     width: 100,
     height: 100,
     marginBottom: 20,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: '#6200EE',
+    alignSelf: 'center',
   },
   label: { marginBottom: 5, fontWeight: '600', color: '#333', alignSelf: 'flex-start' },
   input: {
@@ -64,11 +136,19 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    backgroundColor: '#6200EE',
-    padding: 15,
     borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 20,
+    elevation: 4,
+    shadowColor: '#6200EE',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
+  },
+  gradient: {
+    padding: 15,
     alignItems: 'center',
-    marginTop: 10,
+    borderRadius: 10,
   },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });

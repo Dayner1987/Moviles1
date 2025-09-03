@@ -10,16 +10,16 @@ export const useProductos = (initialProducts: Producto[]) => {
     setProductos(prev => [...prev, producto]);
   };
 
-  // Editar un producto existente por id
-  const editarProducto = (id: string, datos: Partial<Producto>) => {
+  // Editar un producto existente por ProductsID
+  const editarProducto = (ProductsID: number, datos: Partial<Producto>) => {
     setProductos(prev =>
-      prev.map(p => (p.id === id ? { ...p, ...datos } : p))
+      prev.map(p => (p.ProductsID === ProductsID ? { ...p, ...datos } : p))
     );
   };
 
-  // Eliminar un producto por id
-  const eliminarProducto = (id: string) => {
-    setProductos(prev => prev.filter(p => p.id !== id));
+  // Eliminar un producto por ProductsID
+  const eliminarProducto = (ProductsID: number) => {
+    setProductos(prev => prev.filter(p => p.ProductsID !== ProductsID));
   };
 
   return {
