@@ -1,7 +1,7 @@
 // app/(tabs)/ClientHome.tsx
-import React, { useState, useEffect } from 'react';
-import {View,Text,ScrollView,TextInput,TouchableOpacity,StyleSheet,RefreshControl,Image,} from 'react-native';
 import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Image, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, } from 'react-native';
 import { CategoriaConProductos } from '../data/categories';
 import { Producto } from '../data/products';
 import { API } from '../ip/IpDirection';
@@ -163,7 +163,7 @@ export default function ClientHome() {
       <View style={styles.botonesGrid}>
         <TouchableOpacity
           style={styles.boton}
-          onPress={() => router.push('/(tabs)/operations/ManageProducts')}
+          onPress={() => router.push('/(tabs)/opAdmin/NewProducts')}
         >
           <Image
             source={require('../../assets/images/products.png')}
@@ -203,6 +203,17 @@ export default function ClientHome() {
         >
           <Image
             source={require('../../assets/images/products.png')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Gestionar productos</Text>
+        </TouchableOpacity>
+         <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/operations/Search')}
+        >
+          <Image
+            source={require('../../assets/images/search.png')}
             style={styles.botonImagen}
             resizeMode="contain"
           />

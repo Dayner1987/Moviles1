@@ -1,12 +1,12 @@
-import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
+import AdminHome from './app/(tabs)/AdminHome';
+import ClientHome from './app/(tabs)/ClientHome';
+import EmployeeHome from './app/(tabs)/EmployeeHome';
 import Home from './app/(tabs)/index';
 import Login from './app/(tabs)/login';
 import Register from './app/(tabs)/register';
 import { TabsStackParamList } from './app/(tabs)/types';
-import ClientHome from './app/(tabs)/ClientHome';
-import EmployeeHome from './app/(tabs)/EmployeeHome';
-import AdminHome from './app/(tabs)/AdminHome';
 
 // importa tus nuevas pantallas (todas con export default)
 import AddProducts from './app/(tabs)/operations/AddProducts';
@@ -42,6 +42,7 @@ export default function AppStack() {
 
       <Stack.Screen name="NewUsers" component={NewUsers} />
       <Stack.Screen name="NewProducts" component={NewProducts} />
+      
     
     </Stack.Navigator>
   );

@@ -1,17 +1,16 @@
 import { CategoriaConProductos } from './categories';
 
-
 export type Producto = {
-  ProductsID: number;
+  ProductsID: number;   // en lugar de ProductsID
   Name_product: string;
   Price: number;
   Description?: string;
   Amount: number;
   CategoryID: number;
   imageUri?: string;
-  category?: CategoriaConProductos; // <-- agregar opcional
-           // <-- agregar opcional
+  category?: CategoriaConProductos;
 };
+
 
 
 // Array vacío que se llenará desde el backend

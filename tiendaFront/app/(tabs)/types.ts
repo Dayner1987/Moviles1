@@ -11,7 +11,6 @@ export type TabsStackParamList = {
   ManageProducts: undefined;  // nueva
   Orders: undefined;          // nueva
   Search: undefined;
-
   NewProducts:undefined;
   NewUsers:undefined;
 };

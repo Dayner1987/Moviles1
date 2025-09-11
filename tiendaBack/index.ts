@@ -63,35 +63,7 @@ app.post('/auth/login', async (req: Request, res: Response) => {
     res.status(500).json({ error: e.message });
   }
 });
-//enviar a correo electronico 
-app.post('/enviar-factura', async (req, res) => {
-  const { email, html } = req.body;
 
-  const transporter = nodemailer.createTransport({
-    service: 'Gmail', // o tu proveedor SMTP
-    auth: {
-      user: 'tuemail@gmail.com',
-      pass: 'tucontraseña'
-    }
-  });
-
-  try {
-    await transporter.sendMail({
-      from: '"Hairlux" <tuemail@gmail.com>',
-      to: email,
-      subject: 'Tu factura electrónica Hairlux',
-      html
-    });
-    res.status(200).send({ ok: true });
-  } catch (err) {
-  if (err instanceof Error) {
-    res.status(500).send({ ok: false, error: err.message });
-  } else {
-    res.status(500).send({ ok: false, error: String(err) });
-  }
-}
-
-});
 // Crear categoría POST
 
 app.post('/categories', async (req: Request, res: Response) => {
@@ -149,9 +121,10 @@ app.delete('/categories/:id', async (req: Request, res: Response) => {
 
 // Agregar productos
 
-app.post('/products', async (req: Request, res: Response) => {
+app.post('/products', upload.single('image'), async (req: Request, res: Response) => {
   try {
-    const { Name_product, Price, Description, Amount, CategoryID, imageUri } = req.body;
+    const { Name_product, Price, Description, Amount, CategoryID } = req.body;
+    const imageUri = req.file ? `/uploads/${req.file.filename}` : null;
 
     const product = await prisma.products.create({
       data: {
@@ -160,7 +133,7 @@ app.post('/products', async (req: Request, res: Response) => {
         Description,
         Amount: parseInt(Amount),
         CategoryID: parseInt(CategoryID),
-        imageUri, // directamente la URI
+        imageUri,
       },
     });
 
@@ -169,6 +142,7 @@ app.post('/products', async (req: Request, res: Response) => {
     res.status(500).json({ error: e.message });
   }
 });
+
 
 
 
@@ -518,7 +492,8 @@ app.patch('/orders/:id/status', async (req: Request, res: Response) => {
 // Iniciar servidor
 // ---------------------
 
-app.listen(3000, '0.0.0.0', () => {
+app.listen(3000, '10.99.178.181', () => {
+
   console.log('Servidor corriendo en http://10.122.24.181:3000');
 });
 

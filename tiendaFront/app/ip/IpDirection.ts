@@ -1,1 +1,3 @@
-export const API:string="http://10.122.24.181:3000";
+const api="10.99.178.181";
+const port="3000"
+export const API:string=`http://${api}:${port}`;

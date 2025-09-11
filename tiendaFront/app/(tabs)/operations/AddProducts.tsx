@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
-import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { API } from '@/app/ip/IpDirection';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { CategoriaConProductos } from '../../data/categories';
-
-import { productos, Producto } from '../../data/products';
-import ProductList from '../../../components/ProductList';
+import { Producto, productos } from '../../data/products';
 
 export default function AddProducts() {
   const [name, setName] = useState('');
@@ -15,13 +14,11 @@ export default function AddProducts() {
   const [amount, setAmount] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [newCategory, setNewCategory] = useState('');
- 
   const [categorias, setCategorias] = useState<CategoriaConProductos[]>([]);
- 
   const [image, setImage] = useState<any>(null);
 
   useEffect(() => {
-    fetch('http://10.122.24.181:3000/categories')
+    fetch(`${API}/categories`)
       .then(res => res.json())
       .then(data => {
         const categoriasData: CategoriaConProductos[] = data.map((c: any) => ({
@@ -31,8 +28,6 @@ export default function AddProducts() {
         }));
         setCategorias(categoriasData);
       });
-
-      
   }, []);
 
   const pickImage = async () => {
@@ -51,43 +46,51 @@ export default function AddProducts() {
   };
 
   const handleSave = async () => {
-    if (!name || !price || !amount || (!selectedCategory && !newCategory) ) {
+    if (!name || !price || !amount || (!selectedCategory && !newCategory.trim())) {
       Alert.alert('Error', 'Completa todos los campos');
       return;
     }
 
     try {
-      let categoryID = selectedCategory;
-      if (newCategory) {
-        const resCat = await fetch('http://10.122.24.181:3000/categories', {
+      let categoryID: number | null = selectedCategory ?? null;
+
+      if (newCategory.trim() !== '') {
+        const resCat = await fetch(`${API}/categories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ Name_categories: newCategory })
+          body: JSON.stringify({ Name_categories: newCategory.trim() })
         });
         const dataCat = await resCat.json();
-        categoryID = dataCat.CategoriesID;
+        if (!dataCat || !dataCat.CategoriesID) {
+          Alert.alert('Error', 'No se pudo crear la categoría');
+          return;
+        }
+        categoryID = Number(dataCat.CategoriesID);
       }
 
-
+      if (categoryID === null || categoryID === undefined) {
+        Alert.alert('Error', 'Selecciona o crea una categoría válida');
+        return;
+      }
 
       const formData = new FormData();
       formData.append('Name_product', name);
       formData.append('Price', price);
       formData.append('Description', description);
       formData.append('Amount', amount);
-      formData.append('CategoryID', categoryID!.toString());
-      
+      formData.append('CategoryID', String(categoryID));
 
       if (image) {
-        // @ts-ignore
+        const uriParts = image.uri.split('.');
+        const fileType = uriParts[uriParts.length - 1];
         formData.append('image', {
           uri: image.uri,
-          name: `photo.${image.uri.split('.').pop()}`,
-          type: 'image/jpeg'
-        });
+          name: `photo.${fileType}`,
+          type: `image/${fileType}`
+        } as any);
       }
 
-      const response = await fetch('http://10.122.24.181:3000/products', {
+      const response = await fetch(`${API}/products`, {
         method: 'POST',
         body: formData,
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -101,8 +104,7 @@ export default function AddProducts() {
         Price: parseFloat(price),
         Description: description,
         Amount: parseInt(amount),
-        CategoryID: categoryID!,
-       
+        CategoryID: categoryID,
         imageUri: nuevoProducto.imageUri,
       };
       productos.push(nuevo);
@@ -110,7 +112,6 @@ export default function AddProducts() {
       Alert.alert('Éxito', 'Producto agregado');
       setName(''); setPrice(''); setDescription(''); setAmount('');
       setSelectedCategory(null); setNewCategory('');
-   
       setImage(null);
     } catch (e) {
       console.error(e);
@@ -119,72 +120,73 @@ export default function AddProducts() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={80}
-    >
-      <ScrollView style={{ flex: 1, backgroundColor: '#f0f0f0' }} contentContainerStyle={{ paddingBottom: 40 }}>
-        <LinearGradient colors={['#9C27B0', '#6200EE']} style={{ padding: 15, paddingTop: 40 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <TouchableOpacity onPress={() => router.back()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#6200EE' }}>←</Text>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+        <LinearGradient colors={['#9C27B0', '#6200EE']} style={styles.header}>
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Text style={styles.backText}>←</Text>
             </TouchableOpacity>
-            <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>HairLux</Text>
+            <Text style={styles.headerTitle}>HairLux</Text>
             <View style={{ width: 40 }} />
           </View>
         </LinearGradient>
 
-        <View style={{ padding: 15, backgroundColor: '#f5f5f5', borderRadius: 10, margin: 10 }}>
+        <View style={styles.formContainer}>
           <Text>Nombre del producto</Text>
-          <TextInput style={{ backgroundColor:'#fff', borderRadius:6, padding:8, marginVertical:5 }} value={name} onChangeText={setName} />
+          <TextInput style={styles.input} value={name} onChangeText={setName} />
 
           <Text>Precio</Text>
-          <TextInput style={{ backgroundColor:'#fff', borderRadius:6, padding:8, marginVertical:5 }} keyboardType="numeric" value={price} onChangeText={setPrice} />
+          <TextInput style={styles.input} keyboardType="numeric" value={price} onChangeText={setPrice} />
 
           <Text>Descripción</Text>
-          <TextInput style={{ backgroundColor:'#fff', borderRadius:6, padding:8, marginVertical:5 }} value={description} onChangeText={setDescription} />
+          <TextInput style={styles.input} value={description} onChangeText={setDescription} />
 
           <Text>Cantidad</Text>
-          <TextInput style={{ backgroundColor:'#fff', borderRadius:6, padding:8, marginVertical:5 }} keyboardType="numeric" value={amount} onChangeText={setAmount} />
+          <TextInput style={styles.input} keyboardType="numeric" value={amount} onChangeText={setAmount} />
 
           <Text>Selecciona categoría existente</Text>
           {categorias.map(c => (
             <TouchableOpacity
               key={c.id}
               onPress={() => setSelectedCategory(c.id)}
-              style={{
-                padding: 8, marginVertical: 4, borderWidth: 1, borderRadius: 6,
-                borderColor: selectedCategory === c.id ? '#6200EE' : '#ccc',
-                backgroundColor: selectedCategory === c.id ? '#EDE7F6' : '#fff'
-              }}
+              style={[styles.categoryButton, selectedCategory === c.id && styles.categorySelected]}
             >
               <Text>{c.nombre}</Text>
             </TouchableOpacity>
           ))}
-          <TextInput placeholder="O agregar nueva categoría" style={{ backgroundColor:'#fff', borderRadius:6, padding:8, marginVertical:5 }} value={newCategory} onChangeText={setNewCategory} />
+          <TextInput placeholder="O agregar nueva categoría" style={styles.input} value={newCategory} onChangeText={setNewCategory} />
 
-          <TouchableOpacity onPress={pickImage} style={{ backgroundColor: '#03A9F4', padding: 12, borderRadius: 6, marginTop: 10 }}>
-            <Text style={{ color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>
-              {image ? 'Cambiar imagen' : 'Seleccionar imagen'}
-            </Text>
+          <TouchableOpacity onPress={pickImage} style={styles.imageButton}>
+            <Text style={styles.imageButtonText}>{image ? 'Cambiar imagen' : 'Seleccionar imagen'}</Text>
           </TouchableOpacity>
 
-          {image && (
-            <Image source={{ uri: image.uri }} style={{ width: 100, height: 100, marginVertical: 10, borderRadius: 6 }} />
-          )}
+          {image && <Image source={{ uri: image.uri }} style={styles.imagePreview} />}
 
-          <TouchableOpacity onPress={handleSave} style={{ backgroundColor: '#6200EE', padding: 14, borderRadius: 8, marginTop: 15 }}>
-            <Text style={{ color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>Guardar producto</Text>
+          <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+            <Text style={styles.saveButtonText}>Guardar producto</Text>
           </TouchableOpacity>
 
-          {productos.length > 0 && (
-            <View style={{ marginTop: 20 }}>
-              <ProductList productos={productos} />
-            </View>
-          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f0f0f0' },
+  header: { padding: 15, paddingTop: 40 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
+  backText: { fontSize: 20, fontWeight: 'bold', color: '#6200EE' },
+  headerTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+  formContainer: { padding: 15, backgroundColor: '#f5f5f5', borderRadius: 10, margin: 10 },
+  input: { backgroundColor: '#fff', borderRadius: 6, padding: 8, marginVertical: 5 },
+  categoryButton: { padding: 8, marginVertical: 4, borderWidth: 1, borderRadius: 6, borderColor: '#ccc', backgroundColor: '#fff' },
+  categorySelected: { borderColor: '#6200EE', backgroundColor: '#EDE7F6' },
+  imageButton: { backgroundColor: '#03A9F4', padding: 12, borderRadius: 6, marginTop: 10 },
+  imageButtonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold' },
+  imagePreview: { width: 100, height: 100, marginVertical: 10, borderRadius: 6 },
+  saveButton: { backgroundColor: '#6200EE', padding: 14, borderRadius: 8, marginTop: 15 },
+  saveButtonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold' },
+});
