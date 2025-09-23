@@ -22,8 +22,8 @@ export default function AddProducts() {
       .then(res => res.json())
       .then(data => {
         const categoriasData: CategoriaConProductos[] = data.map((c: any) => ({
-          id: c.CategoriesID,
-          nombre: c.Name_categories,
+          CategoriesID: c.CategoriesID,
+          Name_categories: c.Name_categories,
           products: c.products || [],
         }));
         setCategorias(categoriasData);
@@ -148,11 +148,11 @@ export default function AddProducts() {
           <Text>Selecciona categoría existente</Text>
           {categorias.map(c => (
             <TouchableOpacity
-              key={c.id}
-              onPress={() => setSelectedCategory(c.id)}
-              style={[styles.categoryButton, selectedCategory === c.id && styles.categorySelected]}
+              key={c.CategoriesID}
+              onPress={() => setSelectedCategory(c.CategoriesID)}
+              style={[styles.categoryButton, selectedCategory === c.CategoriesID && styles.categorySelected]}
             >
-              <Text>{c.nombre}</Text>
+              <Text>{c.Name_categories}</Text>
             </TouchableOpacity>
           ))}
           <TextInput placeholder="O agregar nueva categoría" style={styles.input} value={newCategory} onChangeText={setNewCategory} />

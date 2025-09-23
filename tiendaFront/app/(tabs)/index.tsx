@@ -1,9 +1,9 @@
 // app/(tabs)/index.tsx
-import React from 'react';
-import { View,Text,TouchableOpacity,ScrollView, RefreshControl,StyleSheet,TextInput,Image} from 'react-native';
 import { router } from 'expo-router';
-import { CategoriaConProductos } from '../data/categories';
+import React from 'react';
+import { Image, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Producto } from '../../app/data/products';
+import { CategoriaConProductos } from '../data/categories';
 import { API } from '../ip/IpDirection';
 
 
@@ -20,8 +20,8 @@ export default function Home() {
 
       const data = await res.json();
       const categoriasData: CategoriaConProductos[] = data.map((c: any) => ({
-        id: c.CategoriesID,
-        nombre: c.Name_categories,
+        CategoriesID: c.CategoriesID,
+        Name_categories: c.Name_categories,
         products: c.products?.map((p: any) => ({
           ProductsID: p.ProductsID,
           Name_product: p.Name_product,
@@ -57,7 +57,7 @@ export default function Home() {
     }))
     .filter(
       (categoria) =>
-        categoria.nombre.toLowerCase().includes(search.toLowerCase()) ||
+        categoria.Name_categories.toLowerCase().includes(search.toLowerCase()) ||
         categoria.products.length > 0
     );
 
@@ -115,25 +115,25 @@ export default function Home() {
         {categoriasFiltradas.length > 0 ? (
           categoriasFiltradas.map((categoria) => (
             <TouchableOpacity
-              key={categoria.id}
+              key={categoria.CategoriesID}
               onPress={() =>
                 setCategoriaSeleccionada(
-                  categoriaSeleccionada === categoria.id ? null : categoria.id
+                  categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
                 )
               }
               style={[
                 styles.categoriaItem,
-                categoriaSeleccionada === categoria.id && styles.categoriaSeleccionada,
+                categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
               ]}
             >
               <Text
                 style={
-                  categoriaSeleccionada === categoria.id
+                  categoriaSeleccionada === categoria.CategoriesID
                     ? styles.categoriaTextSeleccionada
                     : styles.categoriaText
                 }
               >
-                {categoria.nombre}
+                {categoria.Name_categories}
               </Text>
             </TouchableOpacity>
           ))
@@ -146,10 +146,10 @@ export default function Home() {
       {categoriaSeleccionada && (
         <View style={styles.productosContainer}>
           <Text style={styles.sectionTitle}>
-            Productos de {categorias.find(c => c.id === categoriaSeleccionada)?.nombre}
+            Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
           </Text>
           {categorias
-            .find((c) => c.id === categoriaSeleccionada)
+            .find((c) => c.CategoriesID === categoriaSeleccionada)
             ?.products.filter((p) =>
               p.Name_product.toLowerCase().includes(search.toLowerCase())
             )
@@ -158,7 +158,7 @@ export default function Home() {
                 {p.imageUri && (
                   <Image
                     source={{ uri: `${API}${p.imageUri.startsWith('/') ? '' : '/'}${p.imageUri}` }}
-                    style={{ width: '100%', height: 150, borderRadius: 6, marginBottom: 6 }}
+                    style={{ width: '50%', height: 180, borderRadius: 6, marginBottom: 6 }}
                   />
                 )}
                 <Text style={styles.productoNombre}>{p.Name_product}</Text>

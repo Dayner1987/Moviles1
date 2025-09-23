@@ -59,7 +59,7 @@ export default function AdminHome() {
         }))
         .filter(
           (categoria) =>
-            categoria.nombre.toLowerCase().includes(search.toLowerCase()) ||
+            categoria.Name_categories.toLowerCase().includes(search.toLowerCase()) ||
             categoria.products.length > 0
         );
     
@@ -100,25 +100,25 @@ export default function AdminHome() {
            {categoriasFiltradas.length > 0 ? (
              categoriasFiltradas.map((categoria) => (
                <TouchableOpacity
-                 key={categoria.id}
+                 key={categoria.CategoriesID}
                  onPress={() =>
                    setCategoriaSeleccionada(
-                     categoriaSeleccionada === categoria.id ? null : categoria.id
+                     categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
                    )
                  }
                  style={[
                    styles.categoriaItem,
-                   categoriaSeleccionada === categoria.id && styles.categoriaSeleccionada,
+                   categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
                  ]}
                >
                  <Text
                    style={
-                     categoriaSeleccionada === categoria.id
+                     categoriaSeleccionada === categoria.CategoriesID
                        ? styles.categoriaTextSeleccionada
                        : styles.categoriaText
                    }
                  >
-                   {categoria.nombre}
+                   {categoria.Name_categories}
                  </Text>
                </TouchableOpacity>
              ))
@@ -131,10 +131,10 @@ export default function AdminHome() {
          {categoriaSeleccionada && (
            <View style={styles.productosContainer}>
              <Text style={styles.sectionTitle}>
-               Productos de {categorias.find(c => c.id === categoriaSeleccionada)?.nombre}
+               Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
              </Text>
              {categorias
-               .find((c) => c.id === categoriaSeleccionada)
+               .find((c) => c.CategoriesID === categoriaSeleccionada)
                ?.products.filter((p) =>
                  p.Name_product.toLowerCase().includes(search.toLowerCase())
                )

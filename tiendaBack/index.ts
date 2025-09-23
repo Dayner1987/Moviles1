@@ -3,13 +3,15 @@ import { PrismaClient } from './generated/prisma/index.js';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import multer from 'multer';
-import nodemailer from 'nodemailer';
 import bodyParser from 'body-parser';
 
 const prisma = new PrismaClient();
 const app = express();
 app.use(express.json());
 app.use(bodyParser.json());
+
+
+
 
 // Carpeta pública para servir imágenes
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -26,7 +28,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-//login
+//login 
 app.post('/auth/login', async (req: Request, res: Response) => {
   try {
     const { identifier, password } = req.body;
@@ -35,14 +37,19 @@ app.post('/auth/login', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Faltan datos' });
     }
 
-    const user = await prisma.users.findFirst({
-      where: {
-        OR: [
-          { CI: Number(identifier) },
-          { Email: identifier },
-        ],
-      },
-    });
+    // Validar si es CI o Email
+    let whereClause;
+    const ciNumber = Number(identifier);
+
+    if (!isNaN(ciNumber)) {
+      whereClause = { CI: ciNumber };
+    } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+      whereClause = { Email: identifier };
+    } else {
+      return res.status(400).json({ error: 'ID o Email inválido' });
+    }
+
+    const user = await prisma.users.findFirst({ where: whereClause });
 
     if (!user) {
       return res.status(401).json({ error: 'Usuario no encontrado' });
@@ -59,10 +66,13 @@ app.post('/auth/login', async (req: Request, res: Response) => {
     else if (user.Roles_RolesID === 3) role = 'Administrador';
 
     res.json({ id: user.clientID, role });
+
   } catch (e: any) {
+    console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
+
 
 // Crear categoría POST
 
@@ -80,12 +90,15 @@ app.post('/categories', async (req: Request, res: Response) => {
 //tener categoria
 app.get('/categories', async (req: Request, res: Response) => {
   try {
-    const categories = await prisma.categories.findMany({ include: { products: true } });// mejor ordenador para la mas reciente
+    const categories = await prisma.categories.findMany({ include: { products: true } });
     res.json(categories);
   } catch (e: any) {
+    console.error('Error en /categories:', e); // imprime el error completo en la consola
     res.status(500).json({ error: e.message });
   }
 });
+
+
 
 
 // ACTUALIZAR CATEGORIA PUT 
@@ -143,18 +156,19 @@ app.post('/products', upload.single('image'), async (req: Request, res: Response
   }
 });
 
-
-
-
-
 app.get('/products', async (req: Request, res: Response) => {
   try {
-    const products = await prisma.products.findMany();
+    const products = await prisma.products.findMany({
+      include: {
+        categories: true, // 👈 incluye la categoría relacionada
+      },
+    });
     res.json(products);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
+
 
 
 
@@ -317,6 +331,26 @@ app.delete('/users/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Obtener usuario por ID
+app.get('/users/:id', async (req: Request, res: Response) => {
+  try {
+    const clientID = parseInt(req.params.id);
+    const user = await prisma.users.findUnique({
+      where: { clientID },
+      include: { roles: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    res.json(user);
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 
 // ---------------------
 // ROLES DE LOS USUARIOS 
@@ -374,22 +408,52 @@ app.put('/roles/:id', async (req: Request, res: Response) => {
 // ---------------------
 // ORDERS CLIENTS
 // ---------------------
-// 📌 CREAR NUEVA ORDEN (inicializa estado como false automáticamente)
+// POST /orders
 app.post('/orders', async (req: Request, res: Response) => {
-  const { ProductID, UserID, Date_order, United_price } = req.body;
+  const { UserID, Date_order, products } = req.body;
+  // products = [{ ProductID: 1, Quantity: 2 }, { ProductID: 3, Quantity: 1 }]
 
   try {
+    // Crear estado inicial (pendiente)
     const status = await prisma.order_status.create({
-      data: { estado: false }, // Estado "pendiente"
+      data: { estado: false },
     });
 
+    // Calcular precio total
+    const productData = await Promise.all(
+      products.map(async (p: any) => {
+        const prod = await prisma.products.findUnique({ where: { ProductsID: p.ProductID } });
+        if (!prod) throw new Error(`Producto ${p.ProductID} no encontrado`);
+        return {
+          ProductID: p.ProductID,
+          Quantity: p.Quantity,
+          Price: prod.Price,
+          subtotal: prod.Price * p.Quantity,
+        };
+      })
+    );
+
+    const total = productData.reduce((acc, p) => acc + p.subtotal, 0);
+
+    // Crear orden
     const newOrder = await prisma.orders.create({
       data: {
-        ProductID,
         UserID,
         Date_order: new Date(Date_order),
-        United_price,
+        United_price: total,
         StatusOrderID: status.idEstado,
+        items: {
+          create: productData.map((p) => ({
+            ProductID: p.ProductID,
+            Quantity: p.Quantity,
+            Price: p.Price,
+          })),
+        },
+      },
+      include: {
+        items: { include: { product: true } },
+        users: true,
+        order_status: true,
       },
     });
 
@@ -399,13 +463,13 @@ app.post('/orders', async (req: Request, res: Response) => {
   }
 });
 
-// 📌 OBTENER TODAS LAS ÓRDENES
+// GET /orders
 app.get('/orders', async (_req: Request, res: Response) => {
   try {
     const orders = await prisma.orders.findMany({
       include: {
         users: true,
-        products: true,
+        items: { include: { product: true } },
         order_status: true,
       },
     });
@@ -416,10 +480,76 @@ app.get('/orders', async (_req: Request, res: Response) => {
   }
 });
 
-// 📌 OBTENER UNA ORDEN POR ID
+
+// Endpoint para calcular ganancias con filtro de fechas
+app.get('/orders/earnings', async (req: Request, res: Response) => {
+  try {
+    const { filter } = req.query as { filter?: string };
+    const today = new Date();
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (filter) {
+      case 'hoy':
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        break;
+      case 'ayer':
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        break;
+      case 'semana':
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        break;
+      case 'mes':
+        startDate = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        break;
+      default:
+        startDate = new Date(0); // Desde siempre
+        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    }
+
+    // Obtener IDs de status completados
+    const completedStatusIDs = (
+      await prisma.order_status.findMany({ where: { estado: true }, select: { idEstado: true } })
+    ).map(s => s.idEstado);
+
+    // Obtener órdenes completadas en el rango de fechas
+    const completedOrders = await prisma.orders.findMany({
+      where: {
+        StatusOrderID: { in: completedStatusIDs },
+        Date_order: { gte: startDate, lt: endDate },
+      },
+      select: {
+        Date_order: true,
+        items: { select: { Price: true, Quantity: true } },
+      },
+      orderBy: { Date_order: 'asc' },
+    });
+
+    let totalEarnings = 0;
+    const daily: Record<string, number> = {};
+
+    completedOrders.forEach(order => {
+      const day = order.Date_order.toISOString().split('T')[0];
+      const orderTotal = order.items.reduce((sum, item) => sum + item.Price * item.Quantity, 0);
+      totalEarnings += orderTotal;
+      daily[day] = (daily[day] || 0) + orderTotal;
+    });
+
+    res.json({ total: totalEarnings, daily });
+  } catch (e: any) {
+    console.error('Error en /orders/earnings:', e);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+// GET /orders/:id
 app.get('/orders/:id', async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
-
   if (isNaN(id)) return res.status(400).json({ error: "ID inválido" });
 
   try {
@@ -427,53 +557,28 @@ app.get('/orders/:id', async (req: Request, res: Response) => {
       where: { OrdersID: id },
       include: {
         users: true,
-        products: true,
+        items: { include: { product: true } },
         order_status: true,
       },
     });
 
     if (!order) return res.status(404).json({ message: "Orden no encontrada" });
-
     res.json(order);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-//  ELIMINAR UNA ORDEN
-app.delete('/orders/:id', async (req: Request, res: Response) => {
-  const id = parseInt(req.params.id);
-
-  if (isNaN(id)) return res.status(400).json({ error: "ID inválido" });
-
-  try {
-    const deletedOrder = await prisma.orders.delete({
-      where: { OrdersID: id },
-    });
-
-    res.json({ message: "Orden eliminada", deletedOrder });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ---------------------
-// ORDER STATUS
-// ---------------------
 
 
-// ACTUALIZAR ESTADO DE UNA ORDEN (order_status)
+// PATCH /orders/:id/status
 app.patch('/orders/:id/status', async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
   const { estado } = req.body; // true o false
-
   if (isNaN(id)) return res.status(400).json({ error: "ID inválido" });
 
   try {
-    const order = await prisma.orders.findUnique({
-      where: { OrdersID: id },
-    });
-
+    const order = await prisma.orders.findUnique({ where: { OrdersID: id } });
     if (!order) return res.status(404).json({ message: "Orden no encontrada" });
 
     const updatedStatus = await prisma.order_status.update({
@@ -486,14 +591,68 @@ app.patch('/orders/:id/status', async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 });
+// 📌 CREAR ÓRDENES DESDE EL CARRITO
+app.post('/orders/cart', async (req: Request, res: Response) => {
+  const { UserID, productos, metodoPago, direccion } = req.body;
+  // productos = [{ ProductID, Quantity, Price }]
+
+  // 🔹 Validación de datos
+  if (!UserID || !productos || !Array.isArray(productos) || productos.length === 0) {
+    return res.status(400).json({ error: "Datos incompletos" });
+  }
+
+  try {
+    // 1️⃣ Crear estado pendiente (o usar uno ya existente si prefieres)
+    const status = await prisma.order_status.create({
+      data: { estado: false }
+    });
+
+    // 2️⃣ Calcular total de la orden
+    const total = productos.reduce((acc, p) => acc + (p.Price * (p.Quantity || 1)), 0);
+
+    // 3️⃣ Crear la orden principal
+    const order = await prisma.orders.create({
+      data: {
+        UserID,
+        Date_order: new Date(),
+        United_price: total,
+        StatusOrderID: status.idEstado,
+        // opcionalmente guarda método de pago o dirección si tienes estos campos en la tabla
+        // metodoPago,
+        // direccion,
+        items: {
+          create: productos.map((p) => ({
+            ProductID: p.ProductID,
+            Quantity: p.Quantity || 1,
+            Price: p.Price,
+          })),
+        },
+      },
+      include: {
+        items: { include: { product: true } }, // incluye info de productos
+        users: true,
+        order_status: true,
+      },
+    });
+
+    res.status(201).json({
+      message: "Orden creada correctamente",
+      order
+    });
+
+  } catch (error: any) {
+    console.error("Error creando orden:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
 
 
 // ---------------------
 // Iniciar servidor
 // ---------------------
-
-app.listen(3000, '10.99.178.181', () => {
-
-  console.log('Servidor corriendo en http://10.122.24.181:3000');
+app.listen(3000, '0.0.0.0', () => {
+  console.log('Servidor corriendo en http://localhost:3000');
 });
-

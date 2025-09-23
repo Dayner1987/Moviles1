@@ -40,39 +40,50 @@ model categories {
 model products {
   ProductsID   Int        @id @default(autoincrement())
   CategoryID   Int
-
   Name_product String     @db.VarChar(45)
   Price        Float      @db.Float
   Description  String     @db.VarChar(45)
   Amount       Int
-  imageUri     String?    @db.VarChar(255)  // <-- nuevo campo opcional para la ruta de la imagen
-  orders       orders[]
+  imageUri     String?    @db.VarChar(255)
 
   categories   categories @relation(fields: [CategoryID], references: [CategoriesID], onDelete: NoAction, onUpdate: NoAction, map: "fk_Products_Categories")
-  @@index([CategoryID], map: "fk_Products_Categories_idx")
- 
+  orderItems   order_items[] @relation("ProductOrderItems") // <-- solo referencia
 }
 
 
 model orders {
   OrdersID       Int           @id @default(autoincrement())
-  ProductID      Int
   UserID         Int
   Date_order     DateTime      @db.Date
   United_price   Float         @db.Float
   StatusOrderID  Int
 
-  products       products      @relation(fields: [ProductID], references: [ProductsID], map: "fk_Orders_Products")
-  users          users         @relation(fields: [UserID], references: [clientID], map: "fk_Orders_Users")
-  order_status   order_status  @relation(fields: [StatusOrderID], references: [idEstado], map: "fk_Orders_Status")
+  users          users         @relation(fields: [UserID], references: [clientID])
+  order_status   order_status  @relation(fields: [StatusOrderID], references: [idEstado])
+  items          order_items[]
 
-  @@index([ProductID], map: "fk_Orders_Products_idx")
-  @@index([UserID], map: "fk_Orders_Users_idx")
-  @@index([StatusOrderID], map: "fk_Orders_Status_idx")
+  @@index([UserID])
+  @@index([StatusOrderID])
 }
+
+model order_items {
+  id        Int      @id @default(autoincrement())
+  OrderID   Int
+  ProductID Int
+  Quantity  Int
+  Price     Float
+
+  order    orders   @relation(fields: [OrderID], references: [OrdersID])
+  product  products @relation("ProductOrderItems", fields: [ProductID], references: [ProductsID], onDelete: Cascade) // ✅ Aquí va onDelete
+
+  @@index([OrderID])
+  @@index([ProductID])
+}
+
 
 model order_status {
   idEstado Int     @id @default(autoincrement())
   estado   Boolean @default(false)
   orders   orders[]
 }
+

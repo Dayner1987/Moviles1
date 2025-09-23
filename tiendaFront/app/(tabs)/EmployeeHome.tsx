@@ -19,8 +19,8 @@ export default function ClientHome() {
       const data = await res.json();
 
       const categoriasData: CategoriaConProductos[] = data.map((c: any) => ({
-        id: c.CategoriesID,
-        nombre: c.Name_categories,
+      CategoriesID: c.CategoriesID,
+        Name_categories: c.Name_categories,
         products: c.products?.map((p: any) => ({
           ProductsID: p.ProductsID,
           Name_product: p.Name_product,
@@ -58,7 +58,7 @@ export default function ClientHome() {
     }))
     .filter(
       (categoria) =>
-        categoria.nombre.toLowerCase().includes(search.toLowerCase()) ||
+        categoria.Name_categories.toLowerCase().includes(search.toLowerCase()) ||
         categoria.products.length > 0
     );
 
@@ -104,25 +104,25 @@ export default function ClientHome() {
               {categoriasFiltradas.length > 0 ? (
                 categoriasFiltradas.map((categoria) => (
                   <TouchableOpacity
-                    key={categoria.id}
+                    key={categoria.CategoriesID}
                     onPress={() =>
                       setCategoriaSeleccionada(
-                        categoriaSeleccionada === categoria.id ? null : categoria.id
+                        categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
                       )
                     }
                     style={[
                       styles.categoriaItem,
-                      categoriaSeleccionada === categoria.id && styles.categoriaSeleccionada,
+                      categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
                     ]}
                   >
                     <Text
                       style={
-                        categoriaSeleccionada === categoria.id
+                        categoriaSeleccionada === categoria.CategoriesID
                           ? styles.categoriaTextSeleccionada
                           : styles.categoriaText
                       }
                     >
-                      {categoria.nombre}
+                      {categoria.Name_categories}
                     </Text>
                   </TouchableOpacity>
                 ))
@@ -135,10 +135,10 @@ export default function ClientHome() {
             {categoriaSeleccionada && (
               <View style={styles.productosContainer}>
                 <Text style={styles.sectionTitle}>
-                  Productos de {categorias.find(c => c.id === categoriaSeleccionada)?.nombre}
+                  Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
                 </Text>
                 {categorias
-                  .find((c) => c.id === categoriaSeleccionada)
+                  .find((c) => c.CategoriesID === categoriaSeleccionada)
                   ?.products.filter((p) =>
                     p.Name_product.toLowerCase().includes(search.toLowerCase())
                   )
@@ -199,15 +199,17 @@ export default function ClientHome() {
 
         <TouchableOpacity
           style={styles.boton}
-          onPress={() => router.push('/')}
+          onPress={() => router.push('/(tabs)/operations/OrderStatus')}
         >
           <Image
-            source={require('../../assets/images/products.png')}
+            source={require('../../assets/images/status.png')}
             style={styles.botonImagen}
             resizeMode="contain"
           />
-          <Text style={styles.botonTexto}>Gestionar productos</Text>
+          <Text style={styles.botonTexto}>Ordenes Pendientes</Text>
         </TouchableOpacity>
+
+
          <TouchableOpacity
           style={styles.boton}
           onPress={() => router.push('/(tabs)/operations/Search')}
@@ -217,9 +219,35 @@ export default function ClientHome() {
             style={styles.botonImagen}
             resizeMode="contain"
           />
-          <Text style={styles.botonTexto}>Gestionar productos</Text>
+          <Text style={styles.botonTexto}>Busqueda Clientes</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/operations/Search2')}
+        >
+          <Image
+            source={require('../../assets/images/search2.png')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Busqueda Productos</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/opAdmin/EarNings')}
+        >
+          <Image
+            source={require('../../assets/images/earning.png')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Ganancias</Text>
+        </TouchableOpacity>
+         <Text>© 2025 HairLux. Todos los derechos reservados.</Text>
       </View>
+
     </ScrollView>
   );
 }

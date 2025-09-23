@@ -1,4 +1,4 @@
-import { Usuario } from "@/app/data/users";
+import { Producto } from "@/app/data/products";
 import { API } from "@/app/ip/IpDirection";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -14,35 +14,35 @@ import {
   View,
 } from "react-native";
 
-export default function Search() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+export default function Search2() {
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProductos = async () => {
       try {
-        const resUsuarios = await fetch(`${API}/users`);
-        const dataUsuarios = await resUsuarios.json();
-        setUsuarios(dataUsuarios);
+        const res = await fetch(`${API}/products`);
+        const data = await res.json();
+        setProductos(data);
       } catch (error) {
-        console.error(error);
+        console.error("Error al cargar productos:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchProductos();
   }, []);
 
-  const filteredUsuarios = usuarios.filter((u) =>
-    u.Name1.toLowerCase().includes(query.toLowerCase())
+  const filteredProductos = productos.filter((p) =>
+    p.Name_product.toLowerCase().includes(query.toLowerCase())
   );
 
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#FF4500" />
-        <Text style={styles.loadingText}>Cargando datos...</Text>
+        <Text style={styles.loadingText}>Cargando productos...</Text>
       </View>
     );
   }
@@ -51,7 +51,7 @@ export default function Search() {
     <View style={styles.container}>
       {/* Navbar */}
       <LinearGradient
-        colors={["#FF8C00", "#FF4500"]}
+        colors={["#FFA500", "#FF6347"]}
         start={[0, 0]}
         end={[1, 0]}
         style={styles.navbar}
@@ -61,45 +61,47 @@ export default function Search() {
             <Text style={styles.backText}>←</Text>
           </View>
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Buscar Usuarios</Text>
+        <Text style={styles.navTitle}>Buscar Productos</Text>
       </LinearGradient>
 
       {/* Buscador */}
       <TextInput
         style={styles.searchInput}
-        placeholder="Buscar por nombre..."
-        placeholderTextColor="#999"
+        placeholder="Buscar por nombre del producto..."
+        placeholderTextColor="#888"
         value={query}
         onChangeText={setQuery}
       />
 
-      {/* Tabla con scroll horizontal */}
+      {/* Tabla scrollable */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View>
-          {/* Encabezado de tabla */}
+          {/* Encabezados */}
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, { flex: 1 }]}>CI</Text>
-            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Nombre</Text>
-            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Apellido</Text>
-            <Text style={[styles.tableHeaderText, { flex: 3 }]}>Email</Text>
+            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Categoría</Text>
+            <Text style={[styles.tableHeaderText, { flex: 3 }]}>Producto</Text>
+            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Precio</Text>
           </View>
 
-          {/* Contenido scrollable vertical */}
-          <FlatList
-            data={filteredUsuarios}
-            keyExtractor={(item) => item.clientID.toString()}
+          {/* Lista de productos */}
+         <FlatList
+            data={filteredProductos}
+            keyExtractor={(item) => item.ProductsID.toString()}
             renderItem={({ item }) => (
-              <View style={styles.tableRow}>
-                <Text style={[styles.tableCell, { flex: 1 }]}>{item.CI}</Text>
-                <Text style={[styles.tableCell, { flex: 2 }]}>{item.Name1}</Text>
-                <Text style={[styles.tableCell, { flex: 2 }]}>{item.LastName1}</Text>
-                <Text style={[styles.tableCell, { flex: 3 }]}>{item.Email}</Text>
-              </View>
+                <View style={styles.tableRow}>
+                <Text style={[styles.tableCell, { flex: 2 }]}>
+  {item.categories?.Name_categories ?? "Sin categoría"}
+</Text>
+
+                <Text style={[styles.tableCell, { flex: 3 }]}>{item.Name_product}</Text>
+                <Text style={[styles.tableCell, { flex: 2 }]}>${item.Price.toFixed(2)}</Text>
+                </View>
             )}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>No se encontraron usuarios.</Text>
+                <Text style={styles.emptyText}>No se encontraron productos.</Text>
             }
-          />
+            />
+
         </View>
       </ScrollView>
     </View>
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingTop: 10,
   },
   navbar: {
@@ -159,7 +161,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#FF8C00",
+    backgroundColor: "#FF6347",
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderTopLeftRadius: 6,
@@ -172,7 +174,7 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: "row",
-    backgroundColor: "#fefefe",
+    backgroundColor: "#fff",
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderBottomWidth: 1,

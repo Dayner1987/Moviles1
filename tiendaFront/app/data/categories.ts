@@ -1,8 +1,8 @@
 import { Producto } from './products'; // <-- Importa correctamente
 
 export type CategoriaConProductos = {
-  id: number;
-  nombre: string;
+  CategoriesID: number;
+  Name_categories: string;
   products: Producto[]; // Referencia al tipo de products.ts
 };
 
