@@ -9,6 +9,7 @@ import { API } from '../ip/IpDirection';
 import { Usuario } from '../data/users';
 
 export default function ClientHome() {
+  const [menuOpen, setMenuOpen] = useState(false);
   const { carrito, agregarAlCarrito, limpiarCarrito } = useCarrito();
   const [categorias, setCategorias] = useState<CategoriaConProductos[]>([]);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | null>(null);
@@ -74,40 +75,40 @@ const fetchCliente = async () => {
 //// 
   return (
     <ScrollView style={styles.container}>
-      
-      {/* Navbar */}
-      <View style={styles.navbarContainer}>
-        <View style={styles.navbar}>
-          {/* Botón de retroceso */}
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
-
-          {/* Título */}
-          <Text style={styles.navTitle}>HairLux</Text>
-
-          {/* Imagen de usuario */}
-          <TouchableOpacity onPress={() => setMenuClienteAbierto(!menuClienteAbierto)}>
-            <Image
-              source={require('../../assets/images/client.png')}
-              style={styles.userImage}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Dropdown de cliente */}
-        {menuClienteAbierto && cliente && (
-          <View style={styles.dropdownCliente}>
-            <Text style={styles.dropdownText}>
-              Nombre: {cliente.Name1} {cliente.Name2 || ''} {cliente.LastName1} {cliente.LastName2 || ''}
-            </Text>
-            <Text style={styles.dropdownText}>CI: {cliente.CI}</Text>
-            <Text style={styles.dropdownText}>Email: {cliente.Email}</Text>
-            <Text style={styles.dropdownText}>Dirección: {cliente.Address}</Text>
-            <Text style={styles.dropdownText}>Rol: {cliente.role?.NameRol || 'Cliente'}</Text>
-          </View>
-        )}
-      </View>
+     
+             {/* Navbar */}
+     <View style={styles.navbar}>
+       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+         <Text style={styles.backButtonText}>←</Text>
+       </TouchableOpacity>
+       <Text style={styles.navTitle}>HairLux</Text>
+       <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={styles.hamburger}>
+         <View style={styles.bar}></View>
+         <View style={styles.bar}></View>
+         <View style={styles.bar}></View>
+       </TouchableOpacity>
+     </View>
+     
+     {/* Menú desplegable con datos del usuario */}
+     
+     {menuOpen && cliente && (
+       <View style={styles.dropdownMenu}>
+         <Image
+           source={require('../../assets/images/client.png')}
+           style={styles.dropdownUserImage}
+         />
+         <Text style={styles.dropdownText}>
+           Nombre: {cliente.Name1} {cliente.LastName1} {cliente.LastName2 || ''}
+         </Text>
+         <Text style={styles.dropdownText}>CI: {cliente.CI}</Text>
+         <Text style={styles.dropdownText}>Email: {cliente.Email}</Text>
+         <Text style={styles.dropdownText}>Dirección: {cliente.Address}</Text>
+         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+           <View style={styles.statusDot} />
+           <Text style={styles.dropdownTextHighlight}> Rol: {cliente.role?.NameRol || 'Cliente'}</Text>
+         </View>
+       </View>
+     )}
 
       {/* Categorías */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categories}>
@@ -124,20 +125,25 @@ const fetchCliente = async () => {
         ))}
       </ScrollView>
 
-      {/* Productos */}
-      {categoriaSeleccionada &&
-        categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.products.map(p => (
-          <View key={p.ProductsID} style={styles.productCard}>
-            {p.imageUri && <Image source={{ uri: `${API}${p.imageUri}` }} style={styles.productImage} />}
-            <View style={{ flex: 1 }}>
-              <Text style={styles.productName}>{p.Name_product}</Text>
-              <Text style={styles.productPrice}>{p.Price} Bs</Text>
-              <TouchableOpacity style={styles.addBtn} onPress={() => handleBuy(p)}>
-                <Text style={styles.addBtnText}>Añadir al carrito</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+{/* Productos */}
+{categoriaSeleccionada &&
+  categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.products.map(p => (
+    <View key={p.ProductsID} style={styles.productCard}>
+      {p.imageUri && <Image source={{ uri: `${API}${p.imageUri}` }} style={styles.productImage} />}
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View>
+          <Text style={styles.productName}>{p.Name_product}</Text>
+          <Text style={styles.productPrice}>{p.Price} Bs</Text>
+        </View>
+
+        {/* Icono para añadir al carrito */}
+        <TouchableOpacity onPress={() => handleBuy(p)}>
+            <Image source={require('../../assets/images/car.png')} style={styles.cartIcon} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  ))}
+
 
       {/* Carrito */}
       <Text style={styles.header}>Carrito</Text>
@@ -187,7 +193,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     zIndex: 100,
   },
-  dropdownText: { fontSize: 14, marginBottom: 4 },
 
   header: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
   categories: { flexDirection: 'row', marginBottom: 15 },
@@ -209,4 +214,66 @@ const styles = StyleSheet.create({
   clearBtnText: { color: '#fff', fontWeight: 'bold' },
   payBtn: { backgroundColor: '#FF8C00', padding: 10, borderRadius: 6, alignItems: 'center', marginBottom: 20 },
   payBtnText: { color: '#fff', fontWeight: 'bold' },
+
+   // Estilos mejorados para el menú desplegable de usuario
+dropdownMenu: {
+  backgroundColor: '#fff',
+  padding: 20,
+  borderRadius: 16,
+  marginBottom: 15,
+  elevation: 8,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowOffset: { width: 0, height: 6 },
+  shadowRadius: 8,
+  justifyContent: 'flex-start',
+},
+
+dropdownUserImage: {
+  width: 85,
+  height: 85,
+
+  marginBottom: 12,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowOffset: { width: 0, height: 4 },
+  shadowRadius: 6,
+},
+
+dropdownText: {
+  fontSize: 16,
+  marginBottom: 6,
+  color: '#1f2dadff',
+  fontWeight: '600',
+  
+},
+
+dropdownTextHighlight: {
+  color: '#0dd32eff',
+  fontWeight: '700',
+},
+statusDot: {
+  width: 12,
+  height: 12,
+  borderRadius: 6,
+  backgroundColor: '#4CAF50', // verde brillante
+  marginRight: 6,
+},
+bar: { width: 25, height: 3, backgroundColor: '#fff', marginVertical: 2, borderRadius: 2 },
+ backButton: {
+    padding: 5,
+  },
+  backButtonText: {
+    fontSize: 22,
+    color: '#fff',
+  },
+    hamburger: { padding: 5 },
+
+    cartIcon: {
+  width: 32,   // 👈 ajusta tamaño
+  height: 32,  // 👈 ajusta tamaño
+  resizeMode: 'contain', // mantiene proporción
+  marginLeft: 10,
+},
+
 });

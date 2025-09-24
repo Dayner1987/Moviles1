@@ -5,6 +5,7 @@ import { Image, RefreshControl, ScrollView, StyleSheet, Text, TextInput, Touchab
 import { CategoriaConProductos } from '../data/categories';
 import { Producto } from '../data/products';
 import { API } from '../ip/IpDirection';
+import { Usuario } from '../data/users';
 
 export default function ClientHome() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -12,6 +13,29 @@ export default function ClientHome() {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+
+  // Datos del Usuario
+    const [cliente, setCliente] = useState<Usuario | null>(null);
+  
+    // Cargar datos del usuario desde la API
+    
+  const fetchEmployee = async () => {
+    try {
+      const res = await fetch(`${API}/users/2`);
+  
+      if (!res.ok) {
+        console.error('Error al obtener el usuario:', res.status, res.statusText);
+        return;
+      }
+  
+      const data: Usuario = await res.json(); // parsea JSON directamente
+      setCliente(data);
+  
+    } catch (e) {
+      console.error('Error conectando al API:', e);
+    }
+  };
+  
 
   const fetchCategorias = async () => {
     try {
@@ -41,6 +65,7 @@ export default function ClientHome() {
 
   useEffect(() => {
     fetchCategorias();
+    fetchEmployee();
   }, []);
 
   const onRefresh = async () => {
@@ -67,29 +92,41 @@ export default function ClientHome() {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {/* Navbar */}
-      <View style={styles.navbar}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>HairLux</Text>
-        <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={styles.hamburger}>
-          <View style={styles.bar}></View>
-          <View style={styles.bar}></View>
-          <View style={styles.bar}></View>
-        </TouchableOpacity>
-      </View>
+  
+        {/* Navbar */}
+<View style={styles.navbar}>
+  <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+    <Text style={styles.backButtonText}>←</Text>
+  </TouchableOpacity>
+  <Text style={styles.navTitle}>HairLux</Text>
+  <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={styles.hamburger}>
+    <View style={styles.bar}></View>
+    <View style={styles.bar}></View>
+    <View style={styles.bar}></View>
+  </TouchableOpacity>
+</View>
 
-      {menuOpen && (
-        <View style={styles.dropdownMenu}>
-          <TouchableOpacity style={styles.navButton} onPress={() => router.push('/login')}>
-            <Text style={styles.navButtonText}>Ingresar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navButton} onPress={() => router.push('/register')}>
-            <Text style={styles.navButtonText}>Registrarse</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+{/* Menú desplegable con datos del usuario */}
+
+{menuOpen && cliente && (
+  <View style={styles.dropdownMenu}>
+    <Image
+      source={require('../../assets/images/employe.png')}
+      style={styles.dropdownUserImage}
+    />
+    <Text style={styles.dropdownText}>
+      Nombre: {cliente.Name1} {cliente.LastName1} {cliente.LastName2 || ''}
+    </Text>
+    <Text style={styles.dropdownText}>CI: {cliente.CI}</Text>
+    <Text style={styles.dropdownText}>Email: {cliente.Email}</Text>
+    <Text style={styles.dropdownText}>Dirección: {cliente.Address}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <View style={styles.statusDot} />
+      <Text style={styles.dropdownTextHighlight}> Rol: {cliente.role?.NameRol || 'Empleado'}</Text>
+    </View>
+  </View>
+)}
+
 
       {/* Buscador */}
       <TextInput
@@ -273,15 +310,11 @@ const styles = StyleSheet.create({
   navTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
   hamburger: { padding: 5 },
   bar: { width: 25, height: 3, backgroundColor: '#fff', marginVertical: 2, borderRadius: 2 },
-  dropdownMenu: { backgroundColor: '#E0E0E0', padding: 10, borderRadius: 8, marginBottom: 10 },
+ 
   navButton: { padding: 8, backgroundColor: '#6200EE', marginVertical: 4, borderRadius: 6 },
   navButtonText: { color: '#fff', fontWeight: 'bold' },
   searchInput: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#ccc', marginBottom: 10 },
-  categoriaContainer: { marginBottom: 15 },
-  categoriaItem: { padding: 10, borderRadius: 8, backgroundColor: '#EDE7F6' },
-  categoriaSeleccionada: { backgroundColor: '#6200EE' },
-  categoriaText: { color: '#000', fontWeight: 'bold' },
-  categoriaTextSeleccionada: { color: '#fff', fontWeight: 'bold' },
+  
   productoItem: { padding: 10, backgroundColor: '#fff', borderRadius: 8, marginTop: 5 },
   productoNombre: { fontWeight: 'bold', fontSize: 16 },
   productoPrecio: { fontWeight: '600' },
@@ -291,8 +324,7 @@ const styles = StyleSheet.create({
   botonesGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 20 },
   noResults: { marginTop: 20, fontStyle: 'italic', color: '#555' },
    sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 10 },
-    categoriasContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 20 },
-  
+    
   boton: {
     width: '48%',
     height: 120,
@@ -310,4 +342,82 @@ const styles = StyleSheet.create({
   },
   botonImagen: { width: 50, height: 50, marginBottom: 8 },
   botonTexto: { fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  // Estilos mejorados para el menú desplegable de usuario
+dropdownMenu: {
+  backgroundColor: '#fff',
+  padding: 20,
+  borderRadius: 16,
+  marginBottom: 15,
+  elevation: 8,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowOffset: { width: 0, height: 6 },
+  shadowRadius: 8,
+  justifyContent: 'flex-start',
+},
+
+dropdownUserImage: {
+  width: 85,
+  height: 85,
+
+  marginBottom: 12,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowOffset: { width: 0, height: 4 },
+  shadowRadius: 6,
+},
+
+dropdownText: {
+  fontSize: 16,
+  marginBottom: 6,
+  color: '#1f2dadff',
+  fontWeight: '600',
+  
+},
+
+dropdownTextHighlight: {
+  color: '#0dd32eff',
+  fontWeight: '700',
+},
+statusDot: {
+  width: 12,
+  height: 12,
+  borderRadius: 6,
+  backgroundColor: '#4CAF50', // verde brillante
+  marginRight: 6,
+},
+categoriasContainer: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',           // permite varias filas
+  justifyContent: 'flex-start', // se alinea desde la izquierda
+  marginTop: 10,
+},
+
+categoriaItem: {
+  paddingVertical: 8,
+  paddingHorizontal:17,
+  borderRadius: 10,
+  backgroundColor: '#EDE7F6',
+  margin: 7, // <- esto controla el espacio alrededor de cada chip
+  alignItems: 'center',
+  justifyContent: 'center',
+  alignSelf: 'flex-start',
+},
+
+categoriaSeleccionada: {
+  backgroundColor: '#6200EE',
+},
+
+categoriaText: { 
+  color: '#000', 
+  fontWeight: 'bold',
+  textAlign: 'center',
+},
+
+categoriaTextSeleccionada: { 
+  color: '#fff', 
+  fontWeight: 'bold', 
+  textAlign: 'center',
+},
+
 });

@@ -156,66 +156,101 @@ export default function AdminHome() {
          )}
           {/*Botones*/}
             <View style={styles.botonesGrid}>
-                  <TouchableOpacity
-                    style={styles.boton}
-                    onPress={() => router.push('/(tabs)/opAdmin/NewProducts')}
-                  >
-                    <Image
-                      source={require('../../assets/images/products.png')}
-                      style={styles.botonImagen}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.botonTexto}>Gestión Productos</Text>
-                  </TouchableOpacity>
-          
-                  <TouchableOpacity
-                    style={styles.boton}
-                    onPress={() => router.push('/(tabs)/operations/AddProducts')}
-                  >
-                    <Image
-                      source={require('../../assets/images/EditProducts.png')}
-                      style={styles.botonImagen}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.botonTexto}>Agregar producto</Text>
-                  </TouchableOpacity>
-          
-                  <TouchableOpacity
-                    style={styles.boton}
-                    onPress={() => router.push('/(tabs)/operations/Orders')}
-                  >
-                    <Image
-                      source={require('../../assets/images/Ordes.jpeg')}
-                      style={styles.botonImagen}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.botonTexto}>Órdenes</Text>
-                  </TouchableOpacity>
-          
+                   <TouchableOpacity
+                            style={styles.boton}
+                            onPress={() => router.push('/(tabs)/opAdmin/NewProducts')}
+                          >
+                            <Image
+                              source={require('../../assets/images/products.png')}
+                              style={styles.botonImagen}
+                              resizeMode="contain"
+                            />
+                            <Text style={styles.botonTexto}>Gestionar productos</Text>
+                          </TouchableOpacity>
                   
-                   <TouchableOpacity
-                    style={styles.boton}
-                    onPress={() => router.push('/(tabs)/operations/Search')}
-                  >
-                    <Image
-                      source={require('../../assets/images/search.png')}
-                      style={styles.botonImagen}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.botonTexto}>Registros</Text>
-                  </TouchableOpacity>
-                   <TouchableOpacity
-                    style={styles.boton}
-                    onPress={() => router.push('/(tabs)/opAdmin/NewUsers')}
-                  >
-                    <Image
-                      source={require('../../assets/images/users.png')}
-                      style={styles.botonImagen}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.botonTexto}>Gestión Usuarios</Text>
-                  </TouchableOpacity>
-                 
+                          <TouchableOpacity
+                            style={styles.boton}
+                            onPress={() => router.push('/(tabs)/operations/AddProducts')}
+                          >
+                            <Image
+                              source={require('../../assets/images/EditProducts.png')}
+                              style={styles.botonImagen}
+                              resizeMode="contain"
+                            />
+                            <Text style={styles.botonTexto}>Agregar producto</Text>
+                          </TouchableOpacity>
+                  
+                          <TouchableOpacity
+                            style={styles.boton}
+                            onPress={() => router.push('/(tabs)/operations/Orders')}
+                          >
+                            <Image
+                              source={require('../../assets/images/Ordes.jpeg')}
+                              style={styles.botonImagen}
+                              resizeMode="contain"
+                            />
+                            <Text style={styles.botonTexto}>Órdenes</Text>
+                          </TouchableOpacity>
+                  
+                          <TouchableOpacity
+                            style={styles.boton}
+                            onPress={() => router.push('/(tabs)/operations/OrderStatus')}
+                          >
+                            <Image
+                              source={require('../../assets/images/status.png')}
+                              style={styles.botonImagen}
+                              resizeMode="contain"
+                            />
+                            <Text style={styles.botonTexto}>Ordenes Pendientes</Text>
+                          </TouchableOpacity>
+                  
+                  
+                           <TouchableOpacity
+                            style={styles.boton}
+                            onPress={() => router.push('/(tabs)/operations/Search')}
+                          >
+                            <Image
+                              source={require('../../assets/images/search.png')}
+                              style={styles.botonImagen}
+                              resizeMode="contain"
+                            />
+                            <Text style={styles.botonTexto}>Busqueda Clientes</Text>
+                          </TouchableOpacity>
+                  
+                          <TouchableOpacity
+                            style={styles.boton}
+                            onPress={() => router.push('/(tabs)/operations/Search2')}
+                          >
+                            <Image
+                              source={require('../../assets/images/search2.png')}
+                              style={styles.botonImagen}
+                              resizeMode="contain"
+                            />
+                            <Text style={styles.botonTexto}>Busqueda Productos</Text>
+                          </TouchableOpacity>
+                  
+                          <TouchableOpacity
+                            style={styles.boton}
+                            onPress={() => router.push('/(tabs)/opAdmin/EarNings')}
+                          >
+                            <Image
+                              source={require('../../assets/images/earning.png')}
+                              style={styles.botonImagen}
+                              resizeMode="contain"
+                            />
+                            <Text style={styles.botonTexto}>Ganancias</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.boton}
+                            onPress={() => router.push('/(tabs)/opAdmin/NewUsers')}
+                          >
+                            <Image
+                              source={require('../../assets/images/users.png')}
+                              style={styles.botonImagen}
+                              resizeMode="contain"
+                            />
+                            <Text style={styles.botonTexto}>Ganancias</Text>
+                          </TouchableOpacity>
                 </View>
    
          {/* Footer */}

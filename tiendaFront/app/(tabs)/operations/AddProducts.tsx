@@ -3,7 +3,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import * as Animatable from 'react-native-animatable';
 import { CategoriaConProductos } from '../../data/categories';
 import { Producto, productos } from '../../data/products';
 
@@ -16,7 +28,10 @@ export default function AddProducts() {
   const [newCategory, setNewCategory] = useState('');
   const [categorias, setCategorias] = useState<CategoriaConProductos[]>([]);
   const [image, setImage] = useState<any>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
+  // Cargar categorías al inicio
   useEffect(() => {
     fetch(`${API}/categories`)
       .then(res => res.json())
@@ -30,10 +45,11 @@ export default function AddProducts() {
       });
   }, []);
 
+  // Selección de imagen
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permiso denegado', 'Necesitas permisos para acceder a las imágenes');
+      setErrorMsg('Necesitas permiso para acceder a imágenes');
       return;
     }
 
@@ -45,34 +61,37 @@ export default function AddProducts() {
     if (!result.canceled) setImage(result.assets[0]);
   };
 
+  // Guardar producto
   const handleSave = async () => {
     if (!name || !price || !amount || (!selectedCategory && !newCategory.trim())) {
-      Alert.alert('Error', 'Completa todos los campos');
+      setErrorMsg('Completa todos los campos  ');
       return;
     }
 
     try {
       let categoryID: number | null = selectedCategory ?? null;
 
+      // Crear nueva categoría si se ingresó
       if (newCategory.trim() !== '') {
         const resCat = await fetch(`${API}/categories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ Name_categories: newCategory.trim() })
+          body: JSON.stringify({ Name_categories: newCategory.trim() }),
         });
         const dataCat = await resCat.json();
         if (!dataCat || !dataCat.CategoriesID) {
-          Alert.alert('Error', 'No se pudo crear la categoría');
+          setErrorMsg('Error, no se pudo crear la categoría  ');
           return;
         }
         categoryID = Number(dataCat.CategoriesID);
       }
 
       if (categoryID === null || categoryID === undefined) {
-        Alert.alert('Error', 'Selecciona o crea una categoría válida');
+        setErrorMsg('Selecciona una categoría válida  ');
         return;
       }
 
+      // Crear FormData para envío con imagen
       const formData = new FormData();
       formData.append('Name_product', name);
       formData.append('Price', price);
@@ -109,19 +128,48 @@ export default function AddProducts() {
       };
       productos.push(nuevo);
 
-      Alert.alert('Éxito', 'Producto agregado');
-      setName(''); setPrice(''); setDescription(''); setAmount('');
-      setSelectedCategory(null); setNewCategory('');
+      // Mostrar alerta de éxito
+      setShowSuccess(true);
+
+      // Reset form
+      setName(''); 
+      setPrice(''); 
+      setDescription(''); 
+      setAmount('');
+      setSelectedCategory(null); 
+      setNewCategory('');
       setImage(null);
+      setErrorMsg('');
     } catch (e) {
       console.error(e);
-      Alert.alert('Error', 'No se pudo guardar el producto');
+      setErrorMsg('No se pudo guardar el producto');
     }
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={80}
+    >
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+
+        {/* ALERTA DE ÉXITO */}
+        {showSuccess && (
+          <View style={styles.successOverlay}>
+            <View style={styles.successBox}>
+              <Image
+                source={require('../../../assets/images/ci.png')} // 🔹 Pones tu imagen aquí
+                style={{ width: 100, height: 100, marginBottom: 10 }}
+              />
+              <Text style={styles.successText}>Producto agregado con éxito!</Text>
+              <TouchableOpacity onPress={() => setShowSuccess(false)} style={styles.successButton}>
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         <LinearGradient colors={['#9C27B0', '#6200EE']} style={styles.header}>
           <View style={styles.headerRow}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -146,16 +194,34 @@ export default function AddProducts() {
           <TextInput style={styles.input} keyboardType="numeric" value={amount} onChangeText={setAmount} />
 
           <Text>Selecciona categoría existente</Text>
-          {categorias.map(c => (
-            <TouchableOpacity
-              key={c.CategoriesID}
-              onPress={() => setSelectedCategory(c.CategoriesID)}
-              style={[styles.categoryButton, selectedCategory === c.CategoriesID && styles.categorySelected]}
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={selectedCategory}
+              onValueChange={(itemValue) => setSelectedCategory(itemValue)}
+              style={styles.picker}
             >
-              <Text>{c.Name_categories}</Text>
-            </TouchableOpacity>
-          ))}
-          <TextInput placeholder="O agregar nueva categoría" style={styles.input} value={newCategory} onChangeText={setNewCategory} />
+              <Picker.Item label="-- Selecciona una categoría --" value={null} />
+              {categorias.map(c => (
+                <Picker.Item key={c.CategoriesID} label={c.Name_categories} value={c.CategoriesID} />
+              ))}
+            </Picker>
+          </View>
+
+          <TextInput
+            placeholder="O agregar nueva categoría"
+            style={styles.input}
+            value={newCategory}
+            onChangeText={setNewCategory}
+          />
+
+          {errorMsg ? (
+            <Animatable.View animation="shake" style={styles.errorBox}>
+              <Text style={styles.errorText}>{errorMsg}</Text>
+              <View style={styles.errorIcon}>
+                <Text style={styles.errorIconText}>!</Text>
+              </View>
+            </Animatable.View>
+          ) : null}
 
           <TouchableOpacity onPress={pickImage} style={styles.imageButton}>
             <Text style={styles.imageButtonText}>{image ? 'Cambiar imagen' : 'Seleccionar imagen'}</Text>
@@ -166,7 +232,6 @@ export default function AddProducts() {
           <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
             <Text style={styles.saveButtonText}>Guardar producto</Text>
           </TouchableOpacity>
-
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -182,11 +247,39 @@ const styles = StyleSheet.create({
   headerTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
   formContainer: { padding: 15, backgroundColor: '#f5f5f5', borderRadius: 10, margin: 10 },
   input: { backgroundColor: '#fff', borderRadius: 6, padding: 8, marginVertical: 5 },
-  categoryButton: { padding: 8, marginVertical: 4, borderWidth: 1, borderRadius: 6, borderColor: '#ccc', backgroundColor: '#fff' },
-  categorySelected: { borderColor: '#6200EE', backgroundColor: '#EDE7F6' },
+  pickerContainer: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, marginVertical: 5, overflow: 'hidden' },
+  picker: { height: 50, width: '100%' },
   imageButton: { backgroundColor: '#03A9F4', padding: 12, borderRadius: 6, marginTop: 10 },
   imageButtonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold' },
   imagePreview: { width: 100, height: 100, marginVertical: 10, borderRadius: 6 },
   saveButton: { backgroundColor: '#6200EE', padding: 14, borderRadius: 8, marginTop: 15 },
   saveButtonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold' },
+  errorBox: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#fdecea', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#f5c6cb' },
+  errorIcon: { width: 20, height: 20, borderRadius: 4, backgroundColor: 'red', justifyContent: 'center', alignItems: 'center', marginRight: 6 },
+  errorIconText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  errorText: { color: '#db0a0aff', fontSize: 14, fontWeight: '600' },
+
+  // Estilos alerta de éxito
+  successOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  successBox: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    width: 250,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  successText: { fontSize: 16, fontWeight: 'bold', textAlign: 'center', marginBottom: 15 },
+  successButton: { backgroundColor: '#4CAF50', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
 });

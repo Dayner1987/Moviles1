@@ -6,18 +6,16 @@ import { Producto } from '../../app/data/products';
 import { CategoriaConProductos } from '../data/categories';
 import { API } from '../ip/IpDirection';
 
-
 export default function Home() {
-  const [menuOpen, setMenuOpen] = React.useState(false);
   const [categorias, setCategorias] = React.useState<CategoriaConProductos[]>([]);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = React.useState<number | null>(null);
   const [refreshing, setRefreshing] = React.useState(false);
   const [search, setSearch] = React.useState('');
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
   const fetchCategorias = async () => {
     try {
       const res = await fetch(`${API}/categories`);
-
       const data = await res.json();
       const categoriasData: CategoriaConProductos[] = data.map((c: any) => ({
         CategoriesID: c.CategoriesID,
@@ -61,7 +59,6 @@ export default function Home() {
         categoria.products.length > 0
     );
 
-  // Productos destacados (top 3 más caros)
   const productosDestacados = categorias
     .flatMap((c) => c.products)
     .sort((a, b) => b.Price - a.Price)
@@ -84,6 +81,7 @@ export default function Home() {
 
         <Text style={styles.navTitle}>HairLuxX</Text>
 
+        {/* Botón hamburguesa */}
         <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={styles.hamburger}>
           <View style={styles.bar}></View>
           <View style={styles.bar}></View>
@@ -91,141 +89,190 @@ export default function Home() {
         </TouchableOpacity>
       </View>
 
+      {/* Menú desplegable */}
       {menuOpen && (
-        <View style={styles.dropdownMenu}>
-          <TouchableOpacity style={styles.navButton} onPress={() => router.push('/login')}>
-            <Text style={styles.navButtonText}>Ingresar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navButton} onPress={() => router.push('/register')}>
-            <Text style={styles.navButtonText}>Registrarse</Text>
-          </TouchableOpacity>
-        </View>
+       <View style={styles.dropdownMenu}>
+  <TouchableOpacity
+    style={styles.boton}
+    onPress={() => router.push('/(tabs)/login')}
+  >
+    <Image
+      source={require('../../assets/images/login.png')}
+      style={styles.botonImagen}
+      resizeMode="contain"
+    />
+    <Text style={styles.botonTexto}>Inicio Sesión</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.boton}
+    onPress={() => router.push('/(tabs)/register')}
+  >
+    <Image
+      source={require('../../assets/images/register.png')}
+      style={styles.botonImagen}
+      resizeMode="contain"
+    />
+    <Text style={styles.botonTexto}>Registrarse</Text>
+  </TouchableOpacity>
+</View>
+
       )}
 
-      {/* Buscador */}
-      <TextInput
-        placeholder="Buscar categorías o productos..."
-        style={styles.searchInput}
-        value={search}
-        onChangeText={setSearch}
-      />
+      <View style={styles.container2}>
+        {/* Buscador */}
+        <TextInput
+          placeholder="Buscar categorías o productos..."
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+        />
 
-      {/* Lista de categorías */}
-      <View style={styles.categoriasContainer}>
-        {categoriasFiltradas.length > 0 ? (
-          categoriasFiltradas.map((categoria) => (
-            <TouchableOpacity
-              key={categoria.CategoriesID}
-              onPress={() =>
-                setCategoriaSeleccionada(
-                  categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
-                )
-              }
-              style={[
-                styles.categoriaItem,
-                categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
-              ]}
-            >
-              <Text
-                style={
-                  categoriaSeleccionada === categoria.CategoriesID
-                    ? styles.categoriaTextSeleccionada
-                    : styles.categoriaText
+        {/* Lista de categorías */}
+        <View style={styles.categoriasContainer}>
+          {categoriasFiltradas.length > 0 ? (
+            categoriasFiltradas.map((categoria) => (
+              <TouchableOpacity
+                key={categoria.CategoriesID}
+                onPress={() =>
+                  setCategoriaSeleccionada(
+                    categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
+                  )
                 }
+                style={[
+                  styles.categoriaItem,
+                  categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
+                ]}
               >
-                {categoria.Name_categories}
-              </Text>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <Text style={styles.noResults}>No se encontró nada....</Text>
-        )}
-      </View>
-
-      {/* Productos de la categoría seleccionada */}
-      {categoriaSeleccionada && (
-        <View style={styles.productosContainer}>
-          <Text style={styles.sectionTitle}>
-            Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
-          </Text>
-          {categorias
-            .find((c) => c.CategoriesID === categoriaSeleccionada)
-            ?.products.filter((p) =>
-              p.Name_product.toLowerCase().includes(search.toLowerCase())
-            )
-            .map((p: Producto) => (
-              <View key={p.ProductsID} style={styles.productoItem}>
-                {p.imageUri && (
-                  <Image
-                    source={{ uri: `${API}${p.imageUri.startsWith('/') ? '' : '/'}${p.imageUri}` }}
-                    style={{ width: '50%', height: 180, borderRadius: 6, marginBottom: 6 }}
-                  />
-                )}
-                <Text style={styles.productoNombre}>{p.Name_product}</Text>
-                <Text style={styles.productoDescripcion}>{p.Description}</Text>
-                <Text style={styles.productoCantidad}>Cantidad disponible: {p.Amount}</Text>
-                <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
-              </View>
-            ))}
+                <Text
+                  style={
+                    categoriaSeleccionada === categoria.CategoriesID
+                      ? styles.categoriaTextSeleccionada
+                      : styles.categoriaText
+                  }
+                >
+                  {categoria.Name_categories}
+                </Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={styles.noResults}>No se encontró nada....</Text>
+          )}
         </View>
-      )}
 
-      {/* Productos destacados */}
-      <View style={styles.destacadosContainer}>
-        <Text style={styles.sectionTitle}>Productos destacados</Text>
-        {productosDestacados.map((p: Producto) => (
-          <View key={p.ProductsID} style={styles.productoDestacado}>
-            <Text style={styles.productoNombre}>{p.Name_product} - {p.Price} Bs</Text>
+        {/* Productos */}
+        {categoriaSeleccionada && (
+          <View style={styles.productosContainer}>
+            <Text style={styles.sectionTitle}>
+              Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
+            </Text>
+            {categorias
+              .find((c) => c.CategoriesID === categoriaSeleccionada)
+              ?.products.filter((p) =>
+                p.Name_product.toLowerCase().includes(search.toLowerCase())
+              )
+              .map((p: Producto) => (
+                <View key={p.ProductsID} style={styles.productoItem}>
+                  <Image
+                    source={
+                      p.imageUri
+                        ? { uri: `${API}${p.imageUri.startsWith('/') ? '' : '/'}${p.imageUri}` }
+                        : require('../../assets/images/noimg.png')
+                    }
+                    style={{ width: '50%', height: 150, borderRadius: 6, marginBottom: 6 }}
+                  />
+                  <Text style={styles.productoNombre}>{p.Name_product}</Text>
+                  <Text style={styles.productoDescripcion}>{p.Description}</Text>
+                  <Text style={styles.productoCantidad}>Cantidad disponible: {p.Amount}</Text>
+                  <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
+                </View>
+              ))}
           </View>
-        ))}
-      </View>
+        )}
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2025 HairLux. Todos los derechos reservados.</Text>
+        {/* Productos destacados */}
+        <View style={styles.destacadosContainer}>
+          <Text style={styles.sectionTitle}>Productos destacados</Text>
+          {productosDestacados.map((p: Producto) => (
+            <View key={p.ProductsID} style={styles.productoDestacado}>
+              <Text style={styles.productoNombre}>{p.Name_product} - {p.Price} Bs</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>© 2025 HairLux. Todos los derechos reservados.</Text>
+        </View>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, marginTop: 20 },
+  container: { flex: 1, margin: 0, marginTop: 0 },
+  container2: { margin: 15 },
+
   navbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     backgroundColor: '#6200EE',
-    position: 'relative',
   },
   logoContainer: { flexDirection: 'row', alignItems: 'center' },
-  logo: { width: 90, height: 70, marginRight: 10 },
-  navTitle: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
+  logo: { width: 80, height: 90},
+
+ navTitle: {
+  color: '#fff',
+  fontSize: 30,
+  fontWeight: 'bold',
+  position: 'absolute',
+  left: 10,
+  right: 0,
+  textAlign: 'center',
+},
+
+  hamburger: {
+  padding: 10,
+  position: 'absolute',
+  right: 15,
+  top: 40,
+  zIndex: 10,
+},
+
+  bar: { width: 25, height: 3, backgroundColor: '#fff', marginVertical: 2, borderRadius: 2 },
+
+ dropdownMenu: {
+  backgroundColor: '#f5f5f5',
+  flexDirection: 'row',          // <- fila para que queden lado a lado
+  justifyContent: 'space-between', // <- separa los botones
+  flexWrap: 'wrap',              // <- si hay más botones bajan a otra fila
+  paddingVertical: 10,
+  paddingHorizontal: 10,
+  borderRadius: 8,
+  marginTop: 5,
+},
+
+
+  buttonsContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  navButton: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: '#BB86FC',
+    borderRadius: 6,
+    flexDirection: 'row',
+    gap: 4,
   },
-  hamburger: { position: 'absolute', right: 15, top: 15, justifyContent: 'center' },
-  bar: { width: 25, height: 3, backgroundColor: '#fff', marginVertical: 3, borderRadius: 2 },
-  dropdownMenu: {
-    backgroundColor: '#fff',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    paddingVertical: 5,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    marginTop: 5,
-  },
-  navButton: { marginVertical: 5, padding: 8, backgroundColor: '#6200EE', borderRadius: 6, width: '100%' },
   navButtonText: { color: '#fff', fontWeight: 'bold' },
+  buttonIcon: { width: 24, height: 24 },
+
   searchInput: { marginTop: 15, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
 
-
-  categoriasContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 20 },
-  categoriaItem: { padding: 10, borderRadius: 8, margin: 5, backgroundColor: '#EDE7F6' },
+  categoriasContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginTop: 20 },
+  categoriaItem: { paddingVertical: 10, paddingHorizontal: 8, borderRadius: 8, margin: 5, backgroundColor: '#EDE7F6', minWidth: '28%', alignItems: 'center' },
   categoriaSeleccionada: { backgroundColor: '#6200EE' },
   categoriaText: { color: '#000' },
   categoriaTextSeleccionada: { color: '#fff' },
@@ -246,4 +293,32 @@ const styles = StyleSheet.create({
 
   footer: { marginTop: 30, alignItems: 'center', paddingVertical: 10 },
   footerText: { fontSize: 12, color: '#888' },
+  
+boton: {
+  width: '48%',                   // para que dos quepan en la misma fila
+  height: 120,
+  borderRadius: 12,
+  backgroundColor: '#cdc4f5ff',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: 10,
+  elevation: 4,
+  shadowColor: '#000',
+  shadowOpacity: 0.1,
+  shadowOffset: { width: 0, height: 2 },
+  shadowRadius: 4,
+  padding: 10,
+},
+
+botonImagen: {
+  width: 70,
+  height: 70,
+  marginBottom: 8,
+},
+
+botonTexto: {
+  fontWeight: 'bold',
+  textAlign: 'center',
+}
+
 });
