@@ -1,129 +1,217 @@
-import React, { useState, useEffect } from 'react';
-import { API } from "@/app/ip/IpDirection";
+import { CategoriaConProductos } from "@/app/data/categories";
 import { Producto } from "@/app/data/products";
+import { API } from "@/app/ip/IpDirection";
+import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
-import { 
-  View, Text, TextInput, TouchableOpacity, StyleSheet, 
-  FlatList, Alert, Image, ScrollView 
-} from 'react-native';
 import { router } from 'expo-router';
+import LottieView from 'lottie-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  Image, RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput, TouchableOpacity,
+  View
+} from 'react-native';
+import * as Animatable from 'react-native-animatable';
+
+
 
 export default function NewProducts() {
-  const [productos, setProductos] = useState<Producto[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [nombre, setNombre] = useState('');
   const [precio, setPrecio] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [amount, setAmount] = useState('');
   const [categoryID, setCategoryID] = useState('');
   const [imageUri, setImageUri] = useState('');
+  const [categorias, setCategorias] = useState<CategoriaConProductos[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [editId, setEditId] = useState<number | null>(null);
+    const [categoriaSeleccionada, setCategoriaSeleccionada] = React.useState<number | null>(null);
+    const [errorMsg, setErrorMsg] = useState('');
+    const [showSuccess, setShowSuccess] = useState(false);
 
-  useEffect(() => {
-    fetch(`${API}/products`)
-      .then(res => res.json())
-      .then(data => setProductos(data))
-      .catch(() => Alert.alert('Error', 'No se pudieron cargar los productos'));
-  }, []);
+// Guardar producto
+const guardarProducto = async () => {
+  // Validación de campos obligatorios
+  if (!nombre.trim() || !precio.trim() || !amount.trim() || !categoryID.trim()) {
+  
+    setErrorMsg('Completa todos lo campos ');
+    return;
+  }
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images });
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-    }
+  // Validar que precio y cantidad sean números válidos
+  const precioNum = parseFloat(precio);
+  const amountNum = parseInt(amount);
+  if (isNaN(precioNum) || isNaN(amountNum)) {
+    setErrorMsg('precio y cantidad deben ser validos  ');
+    return;
+  }
+
+  const prodData = {
+    Name_product: nombre,
+    Price: precioNum,
+    Description: descripcion || undefined, // opcional
+    Amount: amountNum,
+    CategoryID: parseInt(categoryID),
+    imageUri: imageUri || undefined, // opcional
   };
 
-  const resetForm = () => {
-    setNombre('');
-    setPrecio('');
-    setDescripcion('');
-    setAmount('');
-    setCategoryID('');
-    setImageUri('');
-    setEditId(null);
-  };
-
-  const guardarProducto = () => {
-    if (!nombre || !precio || !amount || !categoryID) {
-      Alert.alert('Error', 'Complete todos los campos obligatorios');
-      return;
-    }
-
-    const prodData = {
-      Name_product: nombre,
-      Price: parseFloat(precio),
-      Description: descripcion || undefined,
-      Amount: parseInt(amount),
-      CategoryID: parseInt(categoryID),
-      imageUri: imageUri || undefined,
-    };
-
+  try {
     const method = editId ? 'PUT' : 'POST';
     const url = editId ? `${API}/products/${editId}` : `${API}/products`;
 
-    fetch(url, {
+    const response = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(prodData),
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Error al guardar');
-        return res.json();
-      })
-      .then(data => {
-        if (editId) {
-          setProductos(productos.map(p => (p.ProductsID === editId ? data : p)));
-          Alert.alert('Éxito', 'Producto actualizado');
-        } else {
-          setProductos([...productos, data]);
-          Alert.alert('Éxito', 'Producto creado');
-        }
-        resetForm();
-      })
-      .catch(() => Alert.alert('Error', 'No se pudo guardar el producto'));
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al guardar el producto');
+    }
+
+    const data = await response.json();
+
+    if (editId) {
+      // Actualiza el producto en la lista
+      setProductos(productos.map(p => p.ProductsID === editId ? data : p));
+    } else {
+      // Agrega nuevo producto
+      setProductos([...productos, data]);
+    }
+
+    resetForm();
+  } catch (error: any) {
+    setErrorMsg('No se pudo guardar el producto!!  ');
+  }
+};
+
+// Editar producto: llena el formulario
+const editarProducto = (p: Producto) => {
+  setNombre(p.Name_product);
+  setPrecio(p.Price.toString());
+  setDescripcion(p.Description || '');
+  setAmount(p.Amount.toString());
+  setCategoryID(p.CategoryID.toString());
+  setImageUri(p.imageUri || ''); // imagen puede estar vacía
+  setEditId(p.ProductsID);
+
+  // Opcional: puedes hacer scroll al formulario si la lista está larga
+};
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [productoAEliminar, setProductoAEliminar] = useState<number | null>(null);
+  
+
+  const confirmarEliminarProducto = (id: number) => {
+    setProductoAEliminar(id);
+    setShowDeleteConfirm(true);
+  };
+// Eliminar producto
+const eliminarProducto = async () => {
+    if (productoAEliminar === null) return;
+
+    try {
+      const response = await fetch(`${API}/products/${productoAEliminar}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Error al eliminar producto');
+
+      setProductos(productos.filter(p => p.ProductsID !== productoAEliminar));
+      setShowDeleteConfirm(false);
+      setShowSuccess(true); // mostrar animación de éxito
+    } catch (error: any) {
+      console.error(error);
+      setShowDeleteConfirm(false);
+    }
   };
 
-  const editarProducto = (p: Producto) => {
-    setNombre(p.Name_product);
-    setPrecio(p.Price.toString());
-    setDescripcion(p.Description || '');
-    setAmount(p.Amount.toString());
-    setCategoryID(p.CategoryID.toString());
-    setImageUri(p.imageUri || '');
-    setEditId(p.ProductsID);
+  // Cargar categorías
+  useEffect(() => {
+    const fetchCategorias = async () => {
+      try {
+        const res = await fetch(`${API}/categories`);
+        const data = await res.json();
+        setCategorias(data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchCategorias();
+  }, []);
+
+  // Cargar productos
+  useEffect(() => {
+    const fetchProductos = async () => {
+      try {
+        const res = await fetch(`${API}/products`);
+        const data = await res.json();
+        setProductos(data);
+      } catch {
+  
+        setErrorMsg('No se pudieron cargar los procutos ');
+      }
+    };
+    fetchProductos();
+  }, []);
+
+  // Seleccionar imagen
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      setErrorMsg('Necesitas acceso a las imagenes  ');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+    });
+    if (!result.canceled) setImageUri(result.assets[0].uri);
   };
 
-  const eliminarProducto = (id: number) => {
-    Alert.alert('Eliminar producto', '¿Está seguro?', [
-      { text: 'Cancelar' },
-      {
-        text: 'Eliminar',
-        onPress: () => {
-          fetch(`${API}/products/${id}`, { method: 'DELETE' })
-            .then(res => {
-              if (!res.ok) throw new Error();
-              setProductos(productos.filter(p => p.ProductsID !== id));
-              if (editId === id) resetForm();
-              Alert.alert('Éxito', 'Producto eliminado');
-            })
-            .catch(() => Alert.alert('Error', 'No se pudo eliminar el producto'));
-        },
-      },
-    ]);
+const onRefresh = async () => {
+  setRefreshing(true);
+  try {
+    const resProductos = await fetch(`${API}/products`);
+    const dataProductos = await resProductos.json();
+    setProductos(dataProductos);
+
+    const resCategorias = await fetch(`${API}/categories`);
+    const dataCategorias = await resCategorias.json();
+    setCategorias(dataCategorias);
+
+  } catch (error) {
+    console.error('Error al refrescar:', error);
+  }
+  setRefreshing(false);
+};
+
+  // Reset form
+  const resetForm = () => {
+    setNombre(''); setPrecio(''); setDescripcion(''); setAmount('');
+    setCategoryID(''); setImageUri(''); setEditId(null);
   };
 
-  return (
-    <ScrollView style={styles.container}>
+
+ return (
+  <>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+        />
+      }
+    >
       {/* Navbar */}
       <View style={styles.navbar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <View style={styles.backCircle}>
-            <Text style={styles.backText}>←</Text>
-          </View>
+          <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.navTitle}>AdminHairlux</Text>
+        <Text style={styles.navTitle}>HairLux</Text>
+        <View style={{ width: 40 }} />
       </View>
-
-      <Text style={styles.header}>Gestión de Productos</Text>
 
       {/* Formulario */}
       <View style={styles.form}>
@@ -133,19 +221,27 @@ export default function NewProducts() {
         <Text style={styles.label}>Precio</Text>
         <TextInput style={styles.input} value={precio} onChangeText={setPrecio} keyboardType="numeric" />
 
-        <Text style={styles.label}>Descripción (opcional)</Text>
+        <Text style={styles.label}>Descripción</Text>
         <TextInput style={styles.input} value={descripcion} onChangeText={setDescripcion} />
 
         <Text style={styles.label}>Cantidad</Text>
         <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="numeric" />
 
-        <Text style={styles.label}>Category ID</Text>
-        <TextInput style={styles.input} value={categoryID} onChangeText={setCategoryID} keyboardType="numeric" />
+        <Text style={styles.label}>Categoría</Text>
+        <Picker
+          selectedValue={categoryID}
+          onValueChange={(val) => setCategoryID(val)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Selecciona categoría" value="" />
+          {categorias.map(c => (
+            <Picker.Item key={c.CategoriesID} label={c.Name_categories} value={c.CategoriesID.toString()} />
+          ))}
+        </Picker>
 
         <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
           <Text style={styles.imageButtonText}>{imageUri ? 'Cambiar imagen' : 'Seleccionar imagen'}</Text>
         </TouchableOpacity>
-
         {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
 
         <TouchableOpacity style={styles.saveButton} onPress={guardarProducto}>
@@ -157,66 +253,255 @@ export default function NewProducts() {
             <Text style={styles.cancelButtonText}>Cancelar</Text>
           </TouchableOpacity>
         )}
+
+        {errorMsg && (
+          <Animatable.View animation="shake" style={styles.errorBox}>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+            <View style={styles.errorIcon}>
+              <Text style={styles.errorIconText}>!</Text>
+            </View>
+          </Animatable.View>
+        )}
       </View>
 
-      {/* Lista de productos */}
-      <FlatList
-        data={productos}
-        keyExtractor={item => String(item.ProductsID ?? Math.random())}
-        renderItem={({ item }) => (
-          <View style={styles.productCard}>
-            {item.imageUri && <Image source={{ uri: item.imageUri }} style={styles.productImage} />}
-            <View style={styles.productInfo}>
-              <Text style={styles.productName}>{item.Name_product}</Text>
-              <Text style={styles.productPrice}>Precio: ${item.Price}</Text>
-              <Text>Cantidad: {item.Amount}</Text>
-              <Text>Categoría ID: {item.CategoryID}</Text>
-              {item.Description && <Text>Descripción: {item.Description}</Text>}
-              <View style={styles.cardButtons}>
-                <TouchableOpacity style={styles.editButton} onPress={() => editarProducto(item)}>
-                  <Text style={styles.buttonText}>Editar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteButton} onPress={() => eliminarProducto(item.ProductsID)}>
-                  <Text style={styles.buttonText}>Eliminar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+      {/* Lista de categorías */}
+      <View style={styles.categoriasContainer}>
+        {categorias.length > 0 ? (
+          categorias.map((categoria) => (
+            <TouchableOpacity
+              key={categoria.CategoriesID}
+              onPress={() =>
+                setCategoriaSeleccionada(
+                  categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
+                )
+              }
+              style={[
+                styles.categoriaItem,
+                categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
+              ]}
+            >
+              <Text
+                style={
+                  categoriaSeleccionada === categoria.CategoriesID
+                    ? styles.categoriaTextSeleccionada
+                    : styles.categoriaText
+                }
+              >
+                {categoria.Name_categories}
+              </Text>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Text style={styles.noResults}>No se encontró nada....</Text>
         )}
-      />
+      </View>
+
+      {/* Productos */}
+      {categoriaSeleccionada && (
+        <View style={styles.productosContainer}>
+          <Text style={styles.sectionTitle}>
+            Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
+          </Text>
+          {categorias
+            .find(c => c.CategoriesID === categoriaSeleccionada)
+            ?.products.map((p: Producto) => (
+              <View key={p.ProductsID} style={styles.productoItem}>
+                <Image
+                  source={
+                    p.imageUri
+                      ? { uri: p.imageUri.startsWith('http') ? p.imageUri : `${API}${p.imageUri.startsWith('/') ? '' : '/'}${p.imageUri}` }
+                      : require('../../../assets/images/noimg.png')
+                  }
+                  style={styles.productoImage}
+                />
+                <View style={styles.productoInfo}>
+                  <Text style={styles.productoNombre}>{p.Name_product}</Text>
+                  <Text style={styles.productoDescripcion}>{p.Description}</Text>
+                  <Text style={styles.productoCantidad}>Cantidad: {p.Amount}</Text>
+                  <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
+                </View>
+                <View style={styles.productoIcons}>
+                  <TouchableOpacity onPress={() => confirmarEliminarProducto(p.ProductsID)}>
+                    <Image source={require('../../../assets/images/eliminar.png')} style={styles.iconoProducto} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => editarProducto(p)}>
+                    <Image source={require('../../../assets/images/editar.png')} style={styles.iconoProducto} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+        </View>
+      )}
     </ScrollView>
-  );
+
+    {/* Confirmación de eliminación */}
+    {showDeleteConfirm && (
+      <View style={styles.overlay}>
+        <View style={styles.confirmBox}>
+          <Image source={require('../../../assets/images/eliminar.png')} style={{ width: 50, height: 50, alignSelf: 'center' }} />
+          <Text style={{ fontSize: 16, textAlign: 'center', marginVertical: 10 }}>
+            ¿Estás seguro que deseas eliminar este producto?
+          </Text>
+          <TouchableOpacity
+            style={styles.confirmButton}
+            onPress={eliminarProducto}
+          >
+            <Text style={{ color: '#fff', textAlign: 'center' }}>Eliminar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.confirmButton, { backgroundColor: '#ccc', marginTop: 5 }]}
+            onPress={() => setShowDeleteConfirm(false)}
+          >
+            <Text style={{ textAlign: 'center' }}>Cancelar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )}
+
+    {/* ALERTA DE ÉXITO */}
+    {showSuccess && (
+      <View style={styles.successOverlay}>
+        <View style={styles.successBox}>
+          <LottieView
+            source={require('../../../assets/fonts/delete.json')}
+            autoPlay
+            loop={false}
+            style={{
+              width: 250,
+              height: 250,
+              marginBottom: 20,
+              borderRadius: 75,
+              borderWidth: 3,
+              borderColor: '#6200EE',
+              alignSelf: 'center',
+            }}
+          />
+          <Text style={styles.successText}>Producto eliminado con éxito!</Text>
+          <TouchableOpacity onPress={() => setShowSuccess(false)} style={styles.successButton}>
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>OK</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )}
+  </>
+);
+
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 15, backgroundColor: '#f9f9f9' ,marginTop:20},
-  navbar: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  container: { flex: 1, padding: 0, backgroundColor: '#f9f9f9' },
+  navbar: { flexDirection: 'row', alignItems: 'center', marginBottom: 15,backgroundColor:'#a90de7ff',padding:30},
   backButton: { justifyContent: 'center', alignItems: 'center' },
-  backCircle: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff',
-    justifyContent: 'center', alignItems: 'center', shadowColor: '#000',
-    shadowOpacity: 0.2, shadowOffset: { width: 0, height: 2 }, shadowRadius: 3, elevation: 3,
-  },
-  backText: { fontSize: 22, color: '#6200EE' },
-  navTitle: { flex: 1, textAlign: 'center', fontSize: 20, fontWeight: 'bold', color: '#6200EE' },
-  header: { fontSize: 22, fontWeight: 'bold', marginBottom: 10, color: '#333' },
-  form: { marginBottom: 20, backgroundColor: '#fff', padding: 15, borderRadius: 10, elevation: 2 },
+  backText: { fontSize: 22, color: '#ffffffff' },
+  navTitle: { flex: 1, textAlign: 'center', fontSize: 30, fontWeight: 'bold', color: '#ffffffff' },
+  form: { backgroundColor: '#fff', padding: 15, borderRadius: 10, elevation: 2 },
   label: { fontSize: 14, fontWeight: 'bold', marginTop: 10 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginTop: 5 },
-  imageButton: { marginTop: 10, backgroundColor: '#6200EE', padding: 10, borderRadius: 8, alignItems: 'center' },
-  imageButtonText: { color: '#fff', fontWeight: 'bold' },
+  picker: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginTop: 5 },
+  imageButton: { marginTop: 10, backgroundColor: '#04a4d4ff', padding: 10, borderRadius: 8, alignItems: 'center' },
+  imageButtonText: { color: '#ffffffff', fontWeight: 'bold' },
   previewImage: { height: 100, width: '100%', marginTop: 10, borderRadius: 8 },
   saveButton: { marginTop: 15, backgroundColor: '#32CD32', padding: 12, borderRadius: 8, alignItems: 'center' },
   saveButtonText: { color: '#fff', fontWeight: 'bold' },
   cancelButton: { marginTop: 10, backgroundColor: '#FF8C00', padding: 12, borderRadius: 8, alignItems: 'center' },
   cancelButtonText: { color: '#fff', fontWeight: 'bold' },
-  productCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 10, padding: 10, marginBottom: 12, elevation: 2 },
-  productImage: { width: 80, height: 80, borderRadius: 8, marginRight: 10 },
-  productInfo: { flex: 1 },
-  productName: { fontWeight: 'bold', fontSize: 16, marginBottom: 4 },
-  productPrice: { color: '#32CD32', marginBottom: 4 },
-  cardButtons: { flexDirection: 'row', marginTop: 8, justifyContent: 'space-between' },
-  editButton: { backgroundColor: '#FFA500', padding: 6, borderRadius: 6, flex: 0.48, alignItems: 'center' },
-  deleteButton: { backgroundColor: '#FF4500', padding: 6, borderRadius: 6, flex: 0.48, alignItems: 'center' },
+  productCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 10, padding: 10, marginBottom: 12, alignItems: 'center', elevation: 2 },
+  productName: { fontWeight: 'bold', fontSize: 16 },
+  iconPlaceholder: { width: 40, height: 40, backgroundColor: '#ccc', borderRadius: 20, marginHorizontal: 5 },
+  productosContainer: { marginTop: 20 },
+productoItem: {
+  flexDirection: 'row',
+  backgroundColor: '#fff',
+  borderRadius: 10,
+  padding: 10,
+  marginBottom: 15,
+  alignItems: 'center',
+  elevation: 2,
+},
+productoImage: { width: 100, height: 100, borderRadius: 8, marginRight: 10 },
+productoInfo: { flex: 1 },
+productoNombre: { fontWeight: 'bold', fontSize: 16, marginBottom: 4 },
+productoDescripcion: { fontSize: 14, color: '#555', marginBottom: 4 },
+productoCantidad: { fontSize: 13, color: '#777' },
+productoPrecio: { fontSize: 14, fontWeight: '600', marginTop: 4 },
+productoIcons: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 10, // para separar los iconos
+},
+iconoProducto: { width: 50, height: 50 },
+
+
+searchInput: { marginTop: 15, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
+
+  categoriasContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginTop: 20 },
+  categoriaItem: { paddingVertical: 10, paddingHorizontal: 8, borderRadius: 8, margin: 5, backgroundColor: '#EDE7F6', minWidth: '28%', alignItems: 'center' },
+  categoriaSeleccionada: { backgroundColor: '#6200EE' },
+  categoriaText: { color: '#000' },
+  categoriaTextSeleccionada: { color: '#fff' },
+
+  noResults: { marginTop: 20, fontStyle: 'italic', color: '#555' },
+sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 10 },
+ errorBox: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#fdecea', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#f5c6cb' },
+  errorIcon: { width: 20, height: 20, borderRadius: 4, backgroundColor: 'red', justifyContent: 'center', alignItems: 'center', marginRight: 6 },
+  errorIconText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  errorText: { color: '#db0a0aff', fontSize: 14, fontWeight: '600' },
+  
+  modal: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalText: { fontSize: 16, textAlign: 'center', marginBottom: 10 },
+  button: {
+    flex: 1,
+    marginHorizontal: 5,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
   buttonText: { color: '#fff', fontWeight: 'bold' },
+  successOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successBox: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+  },
+  successText: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
+
+  overlay: {
+  position: 'absolute',
+  top: 0, left: 0, right: 0, bottom: 0,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 9999, // <- agrega zIndex alto
+},
+confirmBox: {
+  width: '80%',
+  backgroundColor: '#fff',
+  borderRadius: 10,
+  padding: 20,
+  alignItems: 'center',
+  elevation: 10,   // <- agrega para Android
+},
+confirmButton: {
+  width: '100%',
+  backgroundColor: '#d9534f',
+  paddingVertical: 12,
+  borderRadius: 8,
+  marginTop: 10,
+},
+
+  successButton: { marginTop: 10, backgroundColor: '#32CD32', padding: 12, borderRadius: 8, alignItems: 'center', width: '50%' },
 });

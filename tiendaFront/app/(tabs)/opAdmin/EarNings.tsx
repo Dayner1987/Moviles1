@@ -34,7 +34,6 @@ export default function Earnings() {
     }
   }, [filtro]);
 
-  // Generar PDF y abrirlo directamente
   const generarPDF = async () => {
     if (Object.keys(gananciasDiarias).length === 0) return;
 
@@ -51,7 +50,7 @@ export default function Earnings() {
 
     try {
       const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri); // abrir directamente el PDF
+      await Sharing.shareAsync(uri);
     } catch (error) {
       console.error('Error generando PDF:', error);
     }
@@ -75,30 +74,31 @@ export default function Earnings() {
         </Picker>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={calcularGanancias} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Cargando...' : 'Calcular Ganancias'}</Text>
+      <TouchableOpacity style={styles.calcButton} onPress={calcularGanancias} disabled={loading}>
+        <Text style={styles.calcButtonText}>{loading ? 'Cargando...' : 'Calcular Ganancias'}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, { backgroundColor: '#ffffffff' }]} onPress={generarPDF}>
-        <Text style={styles.buttonText}>PDF(PDF)</Text>
+      <TouchableOpacity style={styles.pdfButton} onPress={generarPDF}>
         <Image
-              source={require('../../../assets/images/pdf.png')}
-              resizeMode="contain"
-          />
+          source={require('../../../assets/images/pdf.png')}
+          style={styles.pdfIcon}
+          resizeMode="contain"
+        />
+        <Text style={styles.pdfText}>Generar PDF</Text>
       </TouchableOpacity>
 
       <Text style={styles.result}>Total: {totalGanancias.toFixed(2)} Bs</Text>
 
-      <Text style={[styles.title, { marginTop: 20 }]}>Detalle diario</Text>
+      <Text style={[styles.title, { marginTop: 25 }]}>Detalle diario</Text>
       {Object.keys(gananciasDiarias).length === 0 ? (
-        <Text style={{ fontStyle: 'italic', marginTop: 5 }}>No hay ganancias en este período.</Text>
+        <Text style={styles.noData}>No hay ganancias en este período.</Text>
       ) : (
         Object.entries(gananciasDiarias)
           .sort(([fechaA], [fechaB]) => (fechaA > fechaB ? 1 : -1))
           .map(([fecha, total]) => (
             <View key={fecha} style={styles.dailyRow}>
-              <Text>{fecha}</Text>
-              <Text>{total.toFixed(2)} Bs</Text>
+              <Text style={styles.dailyDate}>{fecha}</Text>
+              <Text style={styles.dailyTotal}>{total.toFixed(2)} Bs</Text>
             </View>
           ))
       )}
@@ -107,19 +107,48 @@ export default function Earnings() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: '#fff', flexGrow: 1 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-  label: { fontSize: 16, marginBottom: 10 },
+  container: { padding: 20, backgroundColor: '#f5f5f5', flexGrow: 1 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 15, color: '#333' },
+  label: { fontSize: 16, marginBottom: 10, color: '#555' },
   pickerContainer: {
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 20,
     overflow: 'hidden',
+    backgroundColor: '#fff'
   },
   picker: { height: 50 },
-  button: { backgroundColor: '#4CAF50', padding: 15, borderRadius: 8, marginBottom: 20 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold' },
-  result: { fontSize: 20, fontWeight: 'bold' },
-  dailyRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
+  calcButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginBottom: 15
+  },
+  calcButtonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold', fontSize: 16 },
+  pdfButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E53935',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginBottom: 20
+  },
+  pdfIcon: { width: 24, height: 24, marginRight: 10 },
+  pdfText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  result: { fontSize: 20, fontWeight: 'bold', marginVertical: 15, color: '#333' },
+  dailyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginBottom: 5
+  },
+  dailyDate: { color: '#333' },
+  dailyTotal: { fontWeight: 'bold', color: '#4CAF50' },
+  noData: { fontStyle: 'italic', marginTop: 5, color: '#777' }
 });

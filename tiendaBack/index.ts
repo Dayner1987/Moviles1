@@ -591,6 +591,7 @@ app.patch('/orders/:id/status', async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 // 📌 CREAR ÓRDENES DESDE EL CARRITO
 app.post('/orders/cart', async (req: Request, res: Response) => {
   const { UserID, productos, metodoPago, direccion } = req.body;
@@ -646,13 +647,67 @@ app.post('/orders/cart', async (req: Request, res: Response) => {
   }
 });
 
+// ---------------------
+// Company
+// ---------------------
+
+// POST crear company (solo se debería usar una vez)
+app.post("/company", async (req, res) => {
+  try {
+    const { Name, QRImage, Logo, Phone, Address } = req.body;
+
+    // Verificamos si ya existe un registro
+    const existing = await prisma.company.findFirst();
+    if (existing) {
+      return res.status(400).json({ error: "Ya existe una configuración de empresa, usa PUT para actualizarla" });
+    }
+
+    const newCompany = await prisma.company.create({
+      data: {
+        Name,
+        QRImage,
+        Logo,
+        Phone,
+        Address,
+      },
+    });
+
+    res.json(newCompany);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al crear la empresa" });
+  }
+});
 
 
+// PUT actualizar company
+app.put("/company/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { Name, QRImage, Logo, Phone, Address } = req.body;
+
+    const updatedCompany = await prisma.company.update({
+      where: { CompanyID: parseInt(id) },
+      data: {
+        Name,
+        QRImage,
+        Logo,
+        Phone,
+        Address,
+      },
+    });
+
+    res.json(updatedCompany);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al actualizar la empresa" });
+  }
+});
 
 
 // ---------------------
 // Iniciar servidor
 // ---------------------
-app.listen(3000, '0.0.0.0', () => {
+app.listen(3000, '192.168.100.157', () => {
   console.log('Servidor corriendo en http://localhost:3000');
 });

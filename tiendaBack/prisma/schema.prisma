@@ -80,10 +80,19 @@ model order_items {
   @@index([ProductID])
 }
 
-
 model order_status {
   idEstado Int     @id @default(autoincrement())
   estado   Boolean @default(false)
   orders   orders[]
+}
+model company {
+  CompanyID   Int      @id @default(autoincrement())
+  Name        String   @db.VarChar(100) // Nombre de la empresa
+  QRImage     String?  @db.VarChar(255) // Ruta o URL de la imagen QR
+  Logo        String?  @db.VarChar(255) // Opcional: logo de la empresa
+  Phone       String?  @db.VarChar(20)  // Opcional: número de contacto
+  Address     String?  @db.VarChar(100) // Opcional: dirección de la empresa
+  UpdatedAt   DateTime @updatedAt       // Se actualiza automáticamente
+  CreatedAt   DateTime @default(now())
 }
 

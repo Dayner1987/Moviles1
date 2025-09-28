@@ -5,7 +5,7 @@ import React from 'react';
 import AdminHome from './app/(tabs)/AdminHome';
 import ClientHome from './app/(tabs)/ClientHome';
 import EmployeeHome from './app/(tabs)/EmployeeHome';
-import Home from './app/(tabs)/index';
+import Home from './app/(tabs)/others/Home';
 import Login from './app/(tabs)/login';
 import Register from './app/(tabs)/register';
 import { TabsStackParamList } from './app/(tabs)/types';

@@ -1,4 +1,3 @@
-// app/(tabs)/types.ts
 export type TabsStackParamList = { 
   Home: undefined;
   Login: undefined;
@@ -7,15 +6,19 @@ export type TabsStackParamList = {
   EmployeeHome: undefined; 
   AdminHome: undefined;
 
-  AddProducts: undefined;     // nueva
-  ManageProducts: undefined;  // nueva
-  Orders: undefined;          // nueva
+  AddProducts: undefined;
+  ManageProducts: undefined;
+  Orders: undefined;
   Search: undefined;
   Search2: undefined;
-  OrderStatus:undefined;
+  OrderStatus: undefined;
 
-  NewProducts:undefined;
-  NewUsers:undefined;
-  EarNings:undefined;
-  
+  NewProducts: undefined;
+  NewUsers: undefined;
+  EarNings: undefined;
+
+  // nuevas para swipe
+  PayClient: undefined;
+  OrdersClient: undefined;
+  UserCon:undefined
 };

@@ -3,17 +3,20 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  Modal,
 } from "react-native";
+import LottieView from "lottie-react-native";
 
 export default function Orders() {
   const router = useRouter();
+
+  // Estados
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
@@ -23,6 +26,8 @@ export default function Orders() {
   const [carrito, setCarrito] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
 
+  const [showSuccess, setShowSuccess] = useState(false); // Modal Lottie
+
   // 🔹 Cargar usuarios
   useEffect(() => {
     const fetchUsers = async () => {
@@ -31,7 +36,7 @@ export default function Orders() {
         const data = await res.json();
         setUsers(data);
       } catch (error) {
-        Alert.alert("Error", "No se pudieron cargar los usuarios");
+        console.log("Error cargando usuarios");
       } finally {
         setLoadingUsers(false);
       }
@@ -47,7 +52,7 @@ export default function Orders() {
         const data = await res.json();
         setCategorias(data);
       } catch (error) {
-        Alert.alert("Error", "No se pudieron cargar las categorías");
+        console.log("Error cargando categorías");
       }
     };
     fetchCategorias();
@@ -65,55 +70,44 @@ export default function Orders() {
     setTotal(0);
   };
 
-const confirmarOrden = async () => {
-  if (!selectedUser) {
-    Alert.alert("Error", "Selecciona un cliente primero");
-    return;
-  }
+  // 🔹 Confirmar orden
+  const confirmarOrden = async () => {
+    if (!selectedUser) return;
+    if (carrito.length === 0) return;
 
-  if (carrito.length === 0) {
-    Alert.alert("Error", "Carrito vacío");
-    return;
-  }
+    try {
+      const productos = carrito.map(p => ({
+        ProductID: p.ProductsID,
+        Quantity: p.Quantity ?? 1,
+        Price: p.Price,
+      }));
 
-  try {
-    // Preparar los productos del carrito
-    const productos = carrito.map((p) => ({
-      ProductID: p.ProductsID,
-      Quantity: 1, // Si manejas cantidades, cámbialo aquí
-      Price: p.Price, // Debe llamarse Price, no United_price
-    }));
+      const res = await fetch(`${API}/orders/cart`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ UserID: selectedUser, productos }),
+      });
 
-    // Llamada al backend
-    const res = await fetch(`${API}/orders/cart`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        UserID: selectedUser,
-        productos, // 🔹 aquí debe ir "productos", no "items"
-      }),
-    });
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Error backend:", errorText);
+        return;
+      }
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error("Error backend:", errorText);
-      Alert.alert("Error", "No se pudo registrar la orden");
-      return;
+      const data = await res.json();
+      console.log("Orden creada:", data);
+
+      setShowSuccess(true); // mostrar modal Lottie
+      limpiarCarrito();
+
+      setTimeout(() => setShowSuccess(false), 2500); // cerrar modal automáticamente
+    } catch (error) {
+      console.error("Error confirmando orden:", error);
     }
-
-    const data = await res.json();
-    console.log("Orden creada:", data);
-
-    Alert.alert("Éxito", "Orden registrada correctamente");
-    limpiarCarrito();
-  } catch (error) {
-    console.error("Error confirmando orden:", error);
-    Alert.alert("Error", "No se pudo registrar la orden");
-  }
-};
+  };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
       {/* Navbar */}
       <View style={styles.navbar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -122,33 +116,50 @@ const confirmarOrden = async () => {
         <Text style={styles.navTitle}>Nueva Orden</Text>
       </View>
 
+      {/* Modal Lottie */}
+      <Modal visible={showSuccess} transparent animationType="fade">
+        <View style={styles.modalBackground}>
+          <View style={styles.lottieContainer}>
+            <LottieView
+              source={require("../../../assets/fonts/add.json")}
+              autoPlay
+              loop={false}
+              style={styles.lottie}
+            />
+            <Text style={styles.lottieText}>Orden tomada con éxito</Text>
+          </View>
+        </View>
+      </Modal>
+
       {/* Selección de usuario */}
-      <Text style={styles.header}>Seleccionar Cliente</Text>
+      <Text style={styles.sectionTitle}>Seleccionar Cliente</Text>
       {loadingUsers ? (
-        <ActivityIndicator size="large" color="#000" />
+        <ActivityIndicator size="large" color="#6200EE" style={{ marginVertical: 20 }} />
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersList}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
           {users.map(u => (
             <TouchableOpacity
               key={u.clientID}
               style={[styles.userBtn, selectedUser === u.clientID && styles.userSelected]}
               onPress={() => setSelectedUser(u.clientID)}
             >
-              <Text style={styles.userText}>{u.Name1} {u.LastName1}</Text>
+              <Text style={selectedUser === u.clientID ? styles.userTextSelected : styles.userText}>
+                {u.Name1} {u.LastName1}
+              </Text>
             </TouchableOpacity>
           ))}
           <TouchableOpacity
-            style={[styles.userBtn, { backgroundColor: "#4CAF50" }]}
+            style={[styles.userBtn, styles.newUserBtn]}
             onPress={() => router.push("/register")}
           >
-            <Text style={{ color: "#fff" }}>+ Nuevo Cliente</Text>
+            <Text style={styles.newUserText}>+ Nuevo Cliente</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
 
       {/* Categorías */}
-      <Text style={styles.header}>Categorías</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categories}>
+      <Text style={styles.sectionTitle}>Categorías</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
         {categorias.map(c => (
           <TouchableOpacity
             key={c.CategoriesID}
@@ -166,31 +177,38 @@ const confirmarOrden = async () => {
       {categoriaSeleccionada &&
         categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.products.map((p: any) => (
           <View key={p.ProductsID} style={styles.productCard}>
-            {p.imageUri && <Image source={{ uri: `${API}${p.imageUri}` }} style={styles.productImage} />}
-            <View style={{ flex: 1 }}>
-              <Text style={styles.productName}>{p.Name_product}</Text>
-              <Text style={styles.productPrice}>{p.Price} Bs</Text>
-              <TouchableOpacity style={styles.addBtn} onPress={() => handleBuy(p)}>
-                <Text style={styles.addBtnText}>Añadir al carrito</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+              {/* Imagen del producto */}
+              {p.imageUri && <Image source={{ uri: `${API}${p.imageUri}` }} style={styles.productImage} />}
+
+              {/* Datos del producto */}
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.productName}>{p.Name_product}</Text>
+                <Text style={styles.productPrice}>{p.Price} Bs</Text>
+                {p.Quantity !== undefined && <Text style={styles.productQuantity}>Cantidad: {p.Quantity}</Text>}
+              </View>
+
+              {/* Botón como imagen a la derecha */}
+              <TouchableOpacity onPress={() => handleBuy(p)} style={{ padding: 5 }}>
+                <Image source={require("../../../assets/images/car.png")} style={styles.addImageBtn} />
               </TouchableOpacity>
             </View>
           </View>
         ))}
 
       {/* Carrito */}
-      <Text style={styles.header}>Carrito</Text>
+      <Text style={styles.sectionTitle}>Carrito</Text>
       {carrito.length === 0 ? (
-        <Text style={{ marginHorizontal: 20 }}>Carrito vacío</Text>
+        <Text style={styles.emptyCartText}>Carrito vacío</Text>
       ) : (
         carrito.map(item => (
           <View key={item.ProductsID} style={styles.cartItem}>
             {item.imageUri && <Image source={{ uri: `${API}${item.imageUri}` }} style={styles.cartImage} />}
-            <Text style={{ flex: 1, marginLeft: 10 }}>
-              {item.Name_product} - {item.Price} Bs
-            </Text>
+            <Text style={{ flex: 1, marginLeft: 10 }}>{item.Name_product} - {item.Price} Bs</Text>
           </View>
         ))
       )}
+
       {carrito.length > 0 && (
         <View style={styles.cartFooter}>
           <Text style={styles.totalText}>Total: {total.toFixed(2)} Bs</Text>
@@ -207,33 +225,106 @@ const confirmarOrden = async () => {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", margin: 5, marginTop: 20 },
-  navbar: { flexDirection: "row", alignItems: "center", padding: 15, backgroundColor: "#eee" },
+  container: { flex: 1, backgroundColor: "#f5f5f5", paddingTop: 20 },
+
+  navbar: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    backgroundColor: "#fff",
+    marginHorizontal: 10,
+    marginBottom: 10,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
   backBtn: { marginRight: 10 },
-  backText: { fontSize: 20 },
-  navTitle: { fontSize: 18, fontWeight: "bold" },
-  header: { fontSize: 16, fontWeight: "bold", margin: 15 },
-  usersList: { paddingHorizontal: 10 },
-  userBtn: { padding: 10, backgroundColor: "#ddd", borderRadius: 10, marginRight: 10 },
-  userSelected: { backgroundColor: "#2196F3" },
-  userText: { color: "#000" },
-  categories: { paddingHorizontal: 10, marginBottom: 10 },
-  categoryBtn: { padding: 10, borderRadius: 10, backgroundColor: "#ddd", marginRight: 10 },
-  categorySelected: { backgroundColor: "#2196F3" },
-  categoryText: { color: "#000" },
-  categoryTextSelected: { color: "#fff" },
-  productCard: { flexDirection: "row", padding: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
-  productImage: { width: 60, height: 60, marginRight: 10 },
-  productName: { fontSize: 14, fontWeight: "bold" },
-  productPrice: { color: "green", marginBottom: 5 },
-  addBtn: { backgroundColor: "#2196F3", padding: 5, borderRadius: 5 },
-  addBtnText: { color: "#fff", textAlign: "center" },
-  cartItem: { flexDirection: "row", alignItems: "center", padding: 10 },
-  cartImage: { width: 40, height: 40 },
-  cartFooter: { flexDirection: "row", alignItems: "center", padding: 15 },
-  totalText: { flex: 1, fontWeight: "bold", fontSize: 16 },
+  backText: { fontSize: 22 },
+  navTitle: { fontSize: 18, fontWeight: "bold", color: "#6200EE" },
+
+  sectionTitle: { fontSize: 16, fontWeight: "bold", marginHorizontal: 15, marginVertical: 10, color: "#333" },
+  horizontalScroll: { paddingHorizontal: 10 },
+
+  userBtn: {
+    padding: 12,
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    marginRight: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  userSelected: { backgroundColor: "#6200EE" },
+  userText: { color: "#000", fontWeight: "500" },
+  userTextSelected: { color: "#fff", fontWeight: "600" },
+  newUserBtn: { backgroundColor: "#4CAF50" },
+  newUserText: { color: "#fff", fontWeight: "bold" },
+
+  categoryBtn: {
+    padding: 12,
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    marginRight: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  categorySelected: { backgroundColor: "#6200EE" },
+  categoryText: { color: "#000", fontWeight: "500" },
+  categoryTextSelected: { color: "#fff", fontWeight: "600" },
+
+  productCard: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    marginHorizontal: 15,
+    marginVertical: 7,
+    borderRadius: 10,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  productImage: { width: 60, height: 60, borderRadius: 8 },
+  productName: { fontSize: 14, fontWeight: "bold", marginBottom: 4 },
+  productPrice: { color: "#4CAF50", marginBottom: 6 },
+  productQuantity: { fontSize: 12, color: "#666" },
+  addImageBtn: { width: 35, height: 35 },
+
+  cartItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    marginHorizontal: 15,
+    marginVertical: 5,
+    borderRadius: 10,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  cartImage: { width: 40, height: 40, borderRadius: 5 },
+  emptyCartText: { marginHorizontal: 20, fontStyle: "italic", color: "#666" },
+
+  cartFooter: { flexDirection: "row", alignItems: "center", marginHorizontal: 15, marginVertical: 15 },
+  totalText: { flex: 1, fontWeight: "bold", fontSize: 16, color: "#333" },
   clearBtn: { backgroundColor: "#f44336", padding: 10, borderRadius: 10, marginRight: 10 },
-  clearBtnText: { color: "#fff" },
+  clearBtnText: { color: "#fff", fontWeight: "600" },
   payBtn: { backgroundColor: "#4CAF50", padding: 10, borderRadius: 10 },
-  payBtnText: { color: "#fff" },
+  payBtnText: { color: "#fff", fontWeight: "600" },
+
+  modalBackground: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  lottieContainer: { backgroundColor: "#fff", padding: 20, borderRadius: 20, alignItems: "center" },
+  lottie: { width: 250, height: 250, marginBottom: 20, borderRadius: 75, borderWidth: 3, borderColor: "#6200EE" },
+  lottieText: { fontSize: 18, fontWeight: "bold", color: "#6200EE" },
 });

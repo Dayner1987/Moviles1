@@ -1,18 +1,18 @@
-import { Usuario } from "@/app/data/users";
-import { API } from "@/app/ip/IpDirection";
-import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TextInput,
+  ScrollView,
+  FlatList,
+  TouchableOpacity,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { API } from "@/app/ip/IpDirection";
+import { Usuario } from "@/app/data/users";
 
 export default function Search() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -22,11 +22,11 @@ export default function Search() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const resUsuarios = await fetch(`${API}/users`);
-        const dataUsuarios = await resUsuarios.json();
-        setUsuarios(dataUsuarios);
+        const res = await fetch(`${API}/users`);
+        const data = await res.json();
+        setUsuarios(data);
       } catch (error) {
-        console.error(error);
+        console.error("Error al cargar usuarios:", error);
       } finally {
         setLoading(false);
       }
@@ -42,7 +42,7 @@ export default function Search() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#FF4500" />
-        <Text style={styles.loadingText}>Cargando datos...</Text>
+        <Text style={styles.loadingText}>Cargando usuarios...</Text>
       </View>
     );
   }
@@ -61,7 +61,7 @@ export default function Search() {
             <Text style={styles.backText}>←</Text>
           </View>
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Buscar Usuarios</Text>
+        <Text style={styles.navTitle}>Usuarios</Text>
       </LinearGradient>
 
       {/* Buscador */}
@@ -76,24 +76,28 @@ export default function Search() {
       {/* Tabla con scroll horizontal */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View>
-          {/* Encabezado de tabla */}
+          {/* Encabezado */}
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, { flex: 1 }]}>CI</Text>
-            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Nombre</Text>
-            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Apellido</Text>
-            <Text style={[styles.tableHeaderText, { flex: 3 }]}>Email</Text>
+            <Text style={[styles.headerCell, { flex: 1.8 }]}>CI</Text>
+            <Text style={[styles.headerCell, { flex: 2.2 }]}>Nombre</Text>
+            <Text style={[styles.headerCell, { flex: 2.2 }]}>Apellido</Text>
+            <Text style={[styles.headerCell, { flex: 3 }]} numberOfLines={1}>
+              Email
+            </Text>
           </View>
 
-          {/* Contenido scrollable vertical */}
+          {/* Filas */}
           <FlatList
             data={filteredUsuarios}
             keyExtractor={(item) => item.clientID.toString()}
             renderItem={({ item }) => (
               <View style={styles.tableRow}>
-                <Text style={[styles.tableCell, { flex: 1 }]}>{item.CI}</Text>
-                <Text style={[styles.tableCell, { flex: 2 }]}>{item.Name1}</Text>
-                <Text style={[styles.tableCell, { flex: 2 }]}>{item.LastName1}</Text>
-                <Text style={[styles.tableCell, { flex: 3 }]}>{item.Email}</Text>
+                <Text style={[styles.tableCell, { flex: 1.8 }]}>{item.CI}</Text>
+                <Text style={[styles.tableCell, { flex: 2.2 }]}>{item.Name1}</Text>
+                <Text style={[styles.tableCell, { flex: 2.2 }]}>{item.LastName1}</Text>
+                <Text style={[styles.tableCell, { flex: 3 }]} numberOfLines={1}>
+                  {item.Email}
+                </Text>
               </View>
             )}
             ListEmptyComponent={
@@ -110,8 +114,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingHorizontal: 10,
-    paddingTop: 10,
+    padding: 10,
   },
   navbar: {
     flexDirection: "row",
@@ -151,36 +154,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     fontSize: 16,
     backgroundColor: "#f9f9f9",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#FF8C00",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderTopLeftRadius: 6,
     borderTopRightRadius: 6,
   },
-  tableHeaderText: {
+  headerCell: {
     fontWeight: "bold",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 15,
+    textAlign: "left",
   },
   tableRow: {
     flexDirection: "row",
-    backgroundColor: "#fefefe",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
   tableCell: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#333",
+    textAlign: "left",
+    paddingRight: 14,
   },
   emptyText: {
     textAlign: "center",

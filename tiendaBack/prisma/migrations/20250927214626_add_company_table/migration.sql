@@ -1,0 +1,13 @@
+-- CreateTable
+CREATE TABLE `company` (
+    `CompanyID` INTEGER NOT NULL AUTO_INCREMENT,
+    `Name` VARCHAR(100) NOT NULL,
+    `QRImage` VARCHAR(255) NULL,
+    `Logo` VARCHAR(255) NULL,
+    `Phone` VARCHAR(20) NULL,
+    `Address` VARCHAR(100) NULL,
+    `UpdatedAt` DATETIME(3) NOT NULL,
+    `CreatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`CompanyID`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

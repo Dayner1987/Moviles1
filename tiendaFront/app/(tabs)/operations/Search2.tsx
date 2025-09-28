@@ -5,7 +5,6 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   ScrollView,
   StyleSheet,
   Text,
@@ -81,27 +80,34 @@ export default function Search2() {
             <Text style={[styles.tableHeaderText, { flex: 2 }]}>Categoría</Text>
             <Text style={[styles.tableHeaderText, { flex: 3 }]}>Producto</Text>
             <Text style={[styles.tableHeaderText, { flex: 2 }]}>Precio</Text>
+            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Stock</Text>
+            <Text style={[styles.tableHeaderText, { flex: 4 }]}>Descripción</Text>
           </View>
 
           {/* Lista de productos */}
-         <FlatList
-            data={filteredProductos}
-            keyExtractor={(item) => item.ProductsID.toString()}
-            renderItem={({ item }) => (
-                <View style={styles.tableRow}>
+          {filteredProductos.length > 0 ? (
+            filteredProductos.map((item) => (
+              <View key={item.ProductsID} style={styles.tableRow}>
                 <Text style={[styles.tableCell, { flex: 2 }]}>
-  {item.categories?.Name_categories ?? "Sin categoría"}
-</Text>
-
-                <Text style={[styles.tableCell, { flex: 3 }]}>{item.Name_product}</Text>
-                <Text style={[styles.tableCell, { flex: 2 }]}>${item.Price.toFixed(2)}</Text>
-                </View>
-            )}
-            ListEmptyComponent={
-                <Text style={styles.emptyText}>No se encontraron productos.</Text>
-            }
-            />
-
+                  {item.categories?.Name_categories ?? "Sin categoría"}
+                </Text>
+                <Text style={[styles.tableCell, { flex: 3 }]}>
+                  {item.Name_product}
+                </Text>
+                <Text style={[styles.tableCell, { flex: 2 }]}>
+                  ${item.Price.toFixed(2)}
+                </Text>
+                <Text style={[styles.tableCell, { flex: 2 }]}>
+                  {item.Amount ?? "-"}
+                </Text>
+                <Text style={[styles.tableCell, { flex: 4 }]} numberOfLines={1}>
+                  {item.Description ?? "Sin descripción"}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No se encontraron productos.</Text>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -162,27 +168,30 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#FF6347",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderTopLeftRadius: 6,
     borderTopRightRadius: 6,
   },
   tableHeaderText: {
     fontWeight: "bold",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 15,
+    textAlign: "center",
   },
   tableRow: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
   tableCell: {
     fontSize: 14,
     color: "#333",
+    textAlign: "center",
+    paddingHorizontal: 4,
   },
   emptyText: {
     textAlign: "center",

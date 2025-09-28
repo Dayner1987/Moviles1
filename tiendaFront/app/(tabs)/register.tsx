@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,Image } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import { API } from '../ip/IpDirection';
+import { Ionicons } from "@expo/vector-icons";
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -104,9 +105,10 @@ if (password.length < 6) {
         style={styles.navbar}
       >
         <View style={styles.navbarRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={() => router.back()}>
+      <Ionicons name="arrow-back" size={24} color="#fff" />
+      <Text style={styles.text}>Atrás</Text>
+    </TouchableOpacity>
           <Text style={styles.navbarTitle}>HairLux</Text>
           <View style={{ width: 40 }} />
         </View>
@@ -287,7 +289,7 @@ const styles = StyleSheet.create({
   borderColor: '#f5c6cb' },
   errorText: { color: '#721c24', fontWeight: '600' },
 
-  button: { width: '100%', marginTop: 15, borderRadius: 13, overflow: 'hidden' },
+
   gradient: { padding: 15, alignItems: 'center', borderRadius: 12 },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   inputContainer: {
@@ -311,5 +313,18 @@ inputWithIcon: {
   flex: 1,           // ocupa el espacio restante
   paddingVertical: 12,
 },
-
+ button: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#6200ee",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  text: {
+    color: "#fff",
+    marginLeft: 6,
+    fontSize: 16,
+    fontWeight: "500",
+  },
 });

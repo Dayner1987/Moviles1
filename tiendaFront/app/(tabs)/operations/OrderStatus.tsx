@@ -1,18 +1,19 @@
+import { OrderItem } from "@/app/data/orders";
+import { API } from "@/app/ip/IpDirection";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  StyleSheet,
   ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { API } from "@/app/ip/IpDirection";
-import { OrderItem } from "@/app/data/orders";
-
+import { router } from "expo-router";
 // Tipos
 type User = {
   Name1: string;
@@ -38,16 +39,20 @@ export default function OrderStatus() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // 🔹 Cargar órdenes pendientes
+  // 🔹 Cargar todas las órdenes
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const res = await fetch(`${API}/orders`);
       const data: Order[] = await res.json();
 
-      // Solo pendientes
-      const pendingOrders = data.filter(order => order.order_status?.estado === false);
-      setOrders(pendingOrders);
+      // Ordenar: pendientes primero, entregadas después
+      const sorted = data.sort((a, b) => {
+        if (a.order_status?.estado === b.order_status?.estado) return 0;
+        return a.order_status?.estado ? 1 : -1; // pendientes arriba
+      });
+
+      setOrders(sorted);
     } catch (error) {
       Alert.alert("Error", "No se pudieron cargar las órdenes");
     } finally {
@@ -55,7 +60,7 @@ export default function OrderStatus() {
     }
   };
 
-  // 🔹 Marcar como completada
+  // 🔹 Marcar como entregada
   const markAsDelivered = async (id: number) => {
     try {
       const res = await fetch(`${API}/orders/${id}/status`, {
@@ -67,7 +72,7 @@ export default function OrderStatus() {
       if (!res.ok) throw new Error("No se pudo actualizar");
 
       Alert.alert("✅ Orden marcada como entregada");
-      fetchOrders(); // recargar lista
+      fetchOrders();
     } catch (error) {
       Alert.alert("Error", "No se pudo actualizar la orden");
     }
@@ -77,24 +82,41 @@ export default function OrderStatus() {
     fetchOrders();
   }, []);
 
-  // 🔹 Filtrar órdenes por cliente o producto
-  const filteredOrders = orders.filter(order =>
-    `${order.users.Name1} ${order.users.LastName1}`.toLowerCase().includes(search.toLowerCase()) ||
-    order.items.some(item => item.product?.Name_product.toLowerCase().includes(search.toLowerCase()))
+  // 🔹 Filtrar órdenes
+  const filteredOrders = orders.filter(
+    (order) =>
+      `${order.users.Name1} ${order.users.LastName1}`
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      order.items.some((item) =>
+        item.product?.Name_product
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      )
   );
 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        
+        <ActivityIndicator size="large" color="#6200EE" />
         <Text>Cargando órdenes...</Text>
       </View>
     );
   }
 
   return (
+
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Órdenes pendientes</Text>
+{/* Navbar */}
+<View style={styles.navbar}>
+  <TouchableOpacity style={styles.navBack} onPress={() => router.back()}>
+    <Ionicons name="arrow-back" size={28} color="#fff" />
+  </TouchableOpacity>
+  <Text style={styles.navTitle}>Gestión de Órdenes</Text>
+</View>
+
+      
 
       {/* Barra de búsqueda */}
       <View style={styles.searchContainer}>
@@ -108,14 +130,35 @@ export default function OrderStatus() {
       </View>
 
       {filteredOrders.length === 0 ? (
-        <Text style={styles.empty}>No hay órdenes pendientes 🎉</Text>
+        <Text style={styles.empty}>No hay órdenes registradas 📦</Text>
       ) : (
-        filteredOrders.map(order => (
+        filteredOrders.map((order) => (
           <View key={order.OrdersID} style={styles.card}>
+            {/* Estado con badge */}
+            <View style={styles.cardHeader}>
+              <Text style={styles.orderId}>Orden #{order.OrdersID}</Text>
+              <View
+                style={[
+                  styles.badge,
+                  order.order_status?.estado
+                    ? styles.badgeDelivered
+                    : styles.badgePending,
+                ]}
+              >
+                <Text style={styles.badgeText}>
+                  {order.order_status?.estado ? "Entregada ✅" : "Pendiente ⏳"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Cliente */}
             <Text style={styles.text}>
               <Text style={styles.label}>Cliente:</Text>{" "}
-              {order.users.Name1} {order.users.Name2 || ""} {order.users.LastName1} {order.users.LastName2 || ""}
+              {order.users.Name1} {order.users.Name2 || ""}{" "}
+              {order.users.LastName1} {order.users.LastName2 || ""}
             </Text>
+
+            {/* Fecha */}
             <Text style={styles.text}>
               <Text style={styles.label}>Fecha:</Text>{" "}
               {new Date(order.Date_order).toLocaleDateString()}
@@ -123,26 +166,37 @@ export default function OrderStatus() {
 
             {/* Productos */}
             <Text style={[styles.label, { marginTop: 8 }]}>Productos:</Text>
-           {order.items.map((item, index) => (
-  <Text key={item.id ?? `${order.OrdersID}-${index}`} style={styles.text}>
-    • {item.product?.Name_product} x{item.Quantity} — {item.Price} Bs
-  </Text>
-))}
-
-          
+            {order.items.map((item, index) => (
+              <Text
+                key={item.id ?? `${order.OrdersID}-${index}`}
+                style={styles.text}
+              >
+                • {item.product?.Name_product} x{item.Quantity} — {item.Price} Bs
+              </Text>
+            ))}
 
             {/* Total */}
             <Text style={[styles.text, { fontWeight: "bold", marginTop: 5 }]}>
               Total:{" "}
-              {order.items.reduce((sum, item) => sum + item.Price * item.Quantity, 0)} Bs
+              {order.items.reduce(
+                (sum, item) => sum + item.Price * item.Quantity,
+                0
+              )}{" "}
+              Bs
             </Text>
 
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => markAsDelivered(order.OrdersID)}
-            >
-              <Text style={styles.buttonText}>Marcar como entregada</Text>
-            </TouchableOpacity>
+            {/* Imagen en lugar de botón */}
+            {!order.order_status?.estado && (
+              <TouchableOpacity
+                style={styles.imageButton}
+                onPress={() => markAsDelivered(order.OrdersID)}
+              >
+                <Image
+                  source={require("../../../assets/images/complete.png")}
+                  style={styles.imageIcon}
+                />
+              </TouchableOpacity>
+            )}
           </View>
         ))
       )}
@@ -153,29 +207,54 @@ export default function OrderStatus() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#f9f9f9" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 12 },
-  empty: { textAlign: "center", marginTop: 20, fontSize: 16 },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 16,
+    color: "#333",
+    textAlign: "center",
+  },
+  empty: { textAlign: "center", marginTop: 20, fontSize: 16, color: "#555" },
   card: {
     backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 14,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
     elevation: 3,
   },
-  text: { fontSize: 16, marginBottom: 4 },
-  label: { fontWeight: "bold" },
-  button: {
-    marginTop: 10,
-    backgroundColor: "#28a745",
-    padding: 10,
-    borderRadius: 8,
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  orderId: { fontSize: 16, fontWeight: "bold", color: "#6200EE" },
+  badge: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+  },
+  badgePending: { backgroundColor: "#ffcccc" },
+  badgeDelivered: { backgroundColor: "#c8f7c5" },
+  badgeText: { fontWeight: "bold", color: "#333" },
+  text: { fontSize: 15, marginBottom: 4, color: "#444" },
+  label: { fontWeight: "bold", color: "#000" },
+
+  // Imagen en vez de botón
+  imageButton: {
+    marginTop: 12,
     alignItems: "center",
   },
-  buttonText: { color: "#fff", fontWeight: "bold" },
+  imageIcon: {
+    width: 85,
+    height: 85,
+    // verde para indicar "completar"
+  },
+
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -186,4 +265,39 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, padding: 8, fontSize: 16 },
   icon: { marginRight: 8 },
+  backButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#6200EE",
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 8,
+  alignSelf: "flex-start",
+  marginBottom: 12,
+},
+backText: {
+  color: "#fff",
+  marginLeft: 6,
+  fontWeight: "bold",
+},
+navbar: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#6200EE",
+  paddingVertical: 12,
+  paddingHorizontal: 15,
+  borderRadius: 8,
+  marginBottom: 16,
+},
+navBack: {
+  marginRight: 10,
+},
+navTitle: {
+  flex: 1,
+  color: "#fff",
+  fontSize: 20,
+  fontWeight: "bold",
+  textAlign: "center",
+},
+
 });

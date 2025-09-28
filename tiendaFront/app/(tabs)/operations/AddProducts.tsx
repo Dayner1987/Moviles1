@@ -1,7 +1,9 @@
 import { API } from '@/app/ip/IpDirection';
+import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import LottieView from 'lottie-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Image,
@@ -14,10 +16,10 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import * as Animatable from 'react-native-animatable';
 import { CategoriaConProductos } from '../../data/categories';
 import { Producto, productos } from '../../data/products';
+
 
 export default function AddProducts() {
   const [name, setName] = useState('');
@@ -30,6 +32,8 @@ export default function AddProducts() {
   const [image, setImage] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+
+  
 
   // Cargar categorías al inicio
   useEffect(() => {
@@ -144,6 +148,7 @@ export default function AddProducts() {
       console.error(e);
       setErrorMsg('No se pudo guardar el producto');
     }
+    
   };
 
   return (
@@ -152,16 +157,27 @@ export default function AddProducts() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={80}
     >
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+      
 
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 180 }}>
         {/* ALERTA DE ÉXITO */}
         {showSuccess && (
           <View style={styles.successOverlay}>
             <View style={styles.successBox}>
-              <Image
-                source={require('../../../assets/images/ci.png')} // 🔹 Pones tu imagen aquí
-                style={{ width: 100, height: 100, marginBottom: 10 }}
-              />
+              <LottieView
+                          source={require('../../../assets/fonts/add.json')}
+                          autoPlay
+                          loop
+                          style={{
+                            width: 250,
+                            height: 250,
+                            marginBottom: 20,
+                            borderRadius: 75,
+                            borderWidth: 3,
+                            borderColor: '#6200EE',
+                            alignSelf: 'center',
+                          }}
+                        />
               <Text style={styles.successText}>Producto agregado con éxito!</Text>
               <TouchableOpacity onPress={() => setShowSuccess(false)} style={styles.successButton}>
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>OK</Text>
@@ -208,7 +224,7 @@ export default function AddProducts() {
           </View>
 
           <TextInput
-            placeholder="O agregar nueva categoría"
+            placeholder="agregar nueva categoría"
             style={styles.input}
             value={newCategory}
             onChangeText={setNewCategory}
@@ -232,6 +248,7 @@ export default function AddProducts() {
           <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
             <Text style={styles.saveButtonText}>Guardar producto</Text>
           </TouchableOpacity>
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

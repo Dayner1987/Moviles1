@@ -1,265 +1,262 @@
 // AdminHome.tsx
-import React, { useState, useEffect } from 'react';
-import { 
-  View, Text, TextInput, TouchableOpacity, StyleSheet, 
-  FlatList, Alert, Image, ScrollView,RefreshControl
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput, TouchableOpacity,
+  View
 } from 'react-native';
 import { CategoriaConProductos } from '../data/categories';
-import { API } from '../ip/IpDirection';
 import { Producto } from '../data/products';
-import { router } from 'expo-router';
-
+import { API } from '../ip/IpDirection';
 
 export default function AdminHome() {
-  
- 
-  const [categorias, setCategorias] = React.useState<CategoriaConProductos[]>([]);
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = React.useState<number | null>(null);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [search, setSearch] = React.useState('');
-   const fetchCategorias = async () => {
+  const [categorias, setCategorias] = useState<CategoriaConProductos[]>([]);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const fetchCategorias = async () => {
     try {
       const res = await fetch(`${API}/categories`);
-        const data = await res.json();
-        const categoriasData: CategoriaConProductos[] = data.map((c: any) => ({
-          id: c.CategoriesID,
-          nombre: c.Name_categories,
-          products: c.products?.map((p: any) => ({
-            ProductsID: p.ProductsID,
-            Name_product: p.Name_product,
-            Price: p.Price,
-            Description: p.Description,
-            Amount: p.Amount,
-            CategoryID: p.CategoryID,
-            imageUri: p.imageUri,
-          })) || [],
-        }));
-        setCategorias(categoriasData);
-      } catch (e) {
-        console.error('Error al obtener categorías:', e);
-      }
-    };
-    
-      React.useEffect(() => {
-        fetchCategorias();
-      }, []);
-    
-      const onRefresh = async () => {
-        setRefreshing(true);
-        await fetchCategorias();
-        setRefreshing(false);
-      };
-    
-      const categoriasFiltradas = categorias
-        .map((categoria) => ({
-          ...categoria,
-          products: categoria.products.filter((p) =>
-            p.Name_product.toLowerCase().includes(search.toLowerCase())
-          ),
-        }))
-        .filter(
-          (categoria) =>
-            categoria.Name_categories.toLowerCase().includes(search.toLowerCase()) ||
-            categoria.products.length > 0
-        );
-    
-      // Productos destacados (top 3 más caros)
-      const productosDestacados = categorias
-        .flatMap((c) => c.products)
-        .sort((a, b) => b.Price - a.Price)
-        .slice(0, 3);
+      const data = await res.json();
+      const categoriasData: CategoriaConProductos[] = data.map((c: any) => ({
+        CategoriesID: c.CategoriesID,
+Name_categories: c.Name_categories,
+        products: c.products?.map((p: any) => ({
+          ProductsID: p.ProductsID,
+          Name_product: p.Name_product,
+          Price: p.Price,
+          Description: p.Description,
+          Amount: p.Amount,
+          CategoryID: p.CategoryID,
+          imageUri: p.imageUri,
+        })) || [],
+      }));
+      setCategorias(categoriasData);
+    } catch (e) {
+      console.error('Error al obtener categorías:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategorias();
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchCategorias();
+    setRefreshing(false);
+  };
+
+  // Filtrado de categorías y productos
+  const categoriasFiltradas = categorias
+    .map((categoria) => ({
+      ...categoria,
+      products: categoria.products.filter((p) =>
+        p.Name_product.toLowerCase().includes(search.toLowerCase())
+      ),
+    }))
+    .filter(
+      (categoria) =>
+        categoria.Name_categories.toLowerCase().includes(search.toLowerCase()) ||
+        categoria.products.length > 0
+    );
+
+
   return (
-   <ScrollView
-         style={styles.container}
-         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-       >
-         {/* Navbar */}
-         <View style={styles.navbar}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
-                       <View style={styles.backCircle}>
-                         <Text style={styles.backText}>←</Text>
-                       </View>
-                     </TouchableOpacity>
-   
-           <Text style={styles.navTitle}>HairLuxX</Text>
-   
-         </View>
-   
-        
-   
-         {/* Buscador */}
-         <TextInput
-           placeholder="Buscar categorías o productos..."
-           style={styles.searchInput}
-           value={search}
-           onChangeText={setSearch}
-         />
-   
-         {/* Lista de categorías */}
-         <View style={styles.categoriasContainer}>
-           {categoriasFiltradas.length > 0 ? (
-             categoriasFiltradas.map((categoria) => (
-               <TouchableOpacity
-                 key={categoria.CategoriesID}
-                 onPress={() =>
-                   setCategoriaSeleccionada(
-                     categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
-                   )
-                 }
-                 style={[
-                   styles.categoriaItem,
-                   categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
-                 ]}
-               >
-                 <Text
-                   style={
-                     categoriaSeleccionada === categoria.CategoriesID
-                       ? styles.categoriaTextSeleccionada
-                       : styles.categoriaText
-                   }
-                 >
-                   {categoria.Name_categories}
-                 </Text>
-               </TouchableOpacity>
-             ))
-           ) : (
-             <Text style={styles.noResults}>No se encontró nada....</Text>
-           )}
-         </View>
-   
-         {/* Productos de la categoría seleccionada */}
-         {categoriaSeleccionada && (
-           <View style={styles.productosContainer}>
-             <Text style={styles.sectionTitle}>
-               Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
-             </Text>
-             {categorias
-               .find((c) => c.CategoriesID === categoriaSeleccionada)
-               ?.products.filter((p) =>
-                 p.Name_product.toLowerCase().includes(search.toLowerCase())
-               )
-               .map((p: Producto) => (
-                 <View key={p.ProductsID} style={styles.productoItem}>
-                   {p.imageUri && (
-                     <Image
-                       source={{ uri: `${API}${p.imageUri.startsWith('/') ? '' : '/'}${p.imageUri}` }}
-                       style={{ width: '100%', height: 150, borderRadius: 6, marginBottom: 6 }}
-                     />
-                   )}
-                   <Text style={styles.productoNombre}>{p.Name_product}</Text>
-                   <Text style={styles.productoDescripcion}>{p.Description}</Text>
-                   <Text style={styles.productoCantidad}>Cantidad disponible: {p.Amount}</Text>
-                   <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
-                 </View>
-               ))}
-           </View>
-         )}
-          {/*Botones*/}
-            <View style={styles.botonesGrid}>
-                   <TouchableOpacity
-                            style={styles.boton}
-                            onPress={() => router.push('/(tabs)/opAdmin/NewProducts')}
-                          >
-                            <Image
-                              source={require('../../assets/images/products.png')}
-                              style={styles.botonImagen}
-                              resizeMode="contain"
-                            />
-                            <Text style={styles.botonTexto}>Gestionar productos</Text>
-                          </TouchableOpacity>
-                  
-                          <TouchableOpacity
-                            style={styles.boton}
-                            onPress={() => router.push('/(tabs)/operations/AddProducts')}
-                          >
-                            <Image
-                              source={require('../../assets/images/EditProducts.png')}
-                              style={styles.botonImagen}
-                              resizeMode="contain"
-                            />
-                            <Text style={styles.botonTexto}>Agregar producto</Text>
-                          </TouchableOpacity>
-                  
-                          <TouchableOpacity
-                            style={styles.boton}
-                            onPress={() => router.push('/(tabs)/operations/Orders')}
-                          >
-                            <Image
-                              source={require('../../assets/images/Ordes.jpeg')}
-                              style={styles.botonImagen}
-                              resizeMode="contain"
-                            />
-                            <Text style={styles.botonTexto}>Órdenes</Text>
-                          </TouchableOpacity>
-                  
-                          <TouchableOpacity
-                            style={styles.boton}
-                            onPress={() => router.push('/(tabs)/operations/OrderStatus')}
-                          >
-                            <Image
-                              source={require('../../assets/images/status.png')}
-                              style={styles.botonImagen}
-                              resizeMode="contain"
-                            />
-                            <Text style={styles.botonTexto}>Ordenes Pendientes</Text>
-                          </TouchableOpacity>
-                  
-                  
-                           <TouchableOpacity
-                            style={styles.boton}
-                            onPress={() => router.push('/(tabs)/operations/Search')}
-                          >
-                            <Image
-                              source={require('../../assets/images/search.png')}
-                              style={styles.botonImagen}
-                              resizeMode="contain"
-                            />
-                            <Text style={styles.botonTexto}>Busqueda Clientes</Text>
-                          </TouchableOpacity>
-                  
-                          <TouchableOpacity
-                            style={styles.boton}
-                            onPress={() => router.push('/(tabs)/operations/Search2')}
-                          >
-                            <Image
-                              source={require('../../assets/images/search2.png')}
-                              style={styles.botonImagen}
-                              resizeMode="contain"
-                            />
-                            <Text style={styles.botonTexto}>Busqueda Productos</Text>
-                          </TouchableOpacity>
-                  
-                          <TouchableOpacity
-                            style={styles.boton}
-                            onPress={() => router.push('/(tabs)/opAdmin/EarNings')}
-                          >
-                            <Image
-                              source={require('../../assets/images/earning.png')}
-                              style={styles.botonImagen}
-                              resizeMode="contain"
-                            />
-                            <Text style={styles.botonTexto}>Ganancias</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={styles.boton}
-                            onPress={() => router.push('/(tabs)/opAdmin/NewUsers')}
-                          >
-                            <Image
-                              source={require('../../assets/images/users.png')}
-                              style={styles.botonImagen}
-                              resizeMode="contain"
-                            />
-                            <Text style={styles.botonTexto}>Ganancias</Text>
-                          </TouchableOpacity>
-                </View>
-   
-         {/* Footer */}
-         <View style={styles.footer}>
-           <Text style={styles.footerText}>© 2025 HairLux. Todos los derechos reservados.</Text>
-         </View>
-       </ScrollView>
+    <ScrollView
+      style={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      {/* Navbar */}
+      <View style={styles.navbar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
+          <View style={styles.backCircle}>
+            <Text style={styles.backText}>←</Text>
+          </View>
+        </TouchableOpacity>
+        <Text style={styles.navTitle}>HairLuxX</Text>
+      </View>
+
+      {/* Buscador */}
+      <TextInput
+        placeholder="Buscar categorías o productos..."
+        style={styles.searchInput}
+        value={search}
+        onChangeText={setSearch}
+      />
+
+      {/* Lista de categorías */}
+      <View style={styles.categoriasContainer}>
+        {categoriasFiltradas.length > 0 ? (
+          categoriasFiltradas.map((categoria) => (
+            <TouchableOpacity
+              key={categoria.CategoriesID}
+              onPress={() =>
+                setCategoriaSeleccionada(
+                  categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
+                )
+              }
+              style={[
+                styles.categoriaItem,
+                categoriaSeleccionada === categoria.CategoriesID&& styles.categoriaSeleccionada,
+              ]}
+            >
+              <Text
+                style={
+                  categoriaSeleccionada === categoria.CategoriesID
+                    ? styles.categoriaTextSeleccionada
+                    : styles.categoriaText
+                }
+              >
+                {categoria.Name_categories}
+              </Text>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Text style={styles.noResults}>No se encontró nada....</Text>
+        )}
+      </View>
+
+      {/* Productos de la categoría seleccionada */}
+      {categoriaSeleccionada && (
+        <View style={styles.productosContainer}>
+          <Text style={styles.sectionTitle}>
+            Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
+          </Text>
+          {categorias
+            .find((c) => c.CategoriesID === categoriaSeleccionada)
+            ?.products.filter((p) =>
+              p.Name_product.toLowerCase().includes(search.toLowerCase())
+            )
+            .map((p: Producto) => (
+              <View key={p.ProductsID} style={styles.productoItem}>
+                {p.imageUri && (
+                  <Image
+                    source={{ uri: `${API}${p.imageUri.startsWith('/') ? '' : '/'}${p.imageUri}` }}
+                    style={{ width: '100%', height: 150, borderRadius: 6, marginBottom: 6 }}
+                  />
+                )}
+                <Text style={styles.productoNombre}>{p.Name_product}</Text>
+                <Text style={styles.productoDescripcion}>{p.Description}</Text>
+                <Text style={styles.productoCantidad}>Cantidad disponible: {p.Amount}</Text>
+                <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
+              </View>
+            ))}
+        </View>
+      )}
+
+      {/* Botones */}
+      <View style={styles.botonesGrid}>
+        <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/opAdmin/NewProducts')}
+        >
+          <Image
+            source={require('../../assets/images/products.png')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Gestionar productos</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/operations/AddProducts')}
+        >
+          <Image
+            source={require('../../assets/images/EditProducts.png')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Agregar producto</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/operations/Orders')}
+        >
+          <Image
+            source={require('../../assets/images/Ordes.jpeg')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Órdenes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/operations/OrderStatus')}
+        >
+          <Image
+            source={require('../../assets/images/status.png')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Ordenes Pendientes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/operations/Search')}
+        >
+          <Image
+            source={require('../../assets/images/search.png')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Busqueda Clientes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/operations/Search2')}
+        >
+          <Image
+            source={require('../../assets/images/search2.png')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Busqueda Productos</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/opAdmin/EarNings')}
+        >
+          <Image
+            source={require('../../assets/images/earning.png')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Ganancias</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.boton}
+          onPress={() => router.push('/(tabs)/opAdmin/NewUsers')}
+        >
+          <Image
+            source={require('../../assets/images/users.png')}
+            style={styles.botonImagen}
+            resizeMode="contain"
+          />
+          <Text style={styles.botonTexto}>Usuarios</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>© 2025 HairLux. Todos los derechos reservados.</Text>
+      </View>
+    </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, marginTop: 20 },
