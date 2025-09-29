@@ -12,7 +12,7 @@ export default function ClientTabsLayout() {
         tabBarIcon: ({ color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
 
-          if (route.name === "index") iconName = "home";
+          if (route.name === "Home") iconName = "home";
           else if (route.name === "OrdersClient") iconName = "list";
           else if (route.name === "PayClient") iconName = "card";
           else if (route.name === "UserCon") iconName = "person";

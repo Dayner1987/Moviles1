@@ -98,21 +98,32 @@ if (password.length < 6) {
   return (
     <View style={styles.container}>
       {/* Navbar */}
-      <LinearGradient
-        colors={['#9C27B0', '#6200EE']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.navbar}
-      >
-        <View style={styles.navbarRow}>
-          <TouchableOpacity style={styles.button} onPress={() => router.back()}>
+    <LinearGradient
+  colors={['#5727b0ff', '#e600eeff']}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 0 }}
+  style={styles.navbar}
+>
+  <View style={styles.navbarRow}>
+    <TouchableOpacity style={styles.button} onPress={() => router.back()}>
       <Ionicons name="arrow-back" size={24} color="#fff" />
       <Text style={styles.text}>Atrás</Text>
     </TouchableOpacity>
-          <Text style={styles.navbarTitle}>HairLux</Text>
-          <View style={{ width: 40 }} />
-        </View>
-      </LinearGradient>
+
+    {/* Contenedor centrado para el título */}
+    <View style={{ flex: 1, alignItems: 'center' }}>
+      <Text style={styles.navbarTitle}>HairLux</Text>
+    </View>
+
+    {/* Espacio a la derecha para balancear */}
+    <Image
+      source={require('../../assets/images/logo.png')}
+      style={styles.logo}
+      resizeMode="contain"
+    />
+  </View>
+</LinearGradient>
+
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
@@ -224,7 +235,7 @@ if (password.length < 6) {
             ) : null}
 
             {/* Botón */}
-            <TouchableOpacity style={styles.button} onPress={handleRegister}>
+            <TouchableOpacity  onPress={handleRegister}>
               <LinearGradient
                 colors={['#9C27B0', '#6200EE']}
                 start={{ x: 0, y: 0 }}
@@ -244,20 +255,63 @@ if (password.length < 6) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f8' },
   container2: { margin: 15, marginBottom: 35 },
-  navbar: {
-    height: 100,
-    justifyContent: 'center',
-    borderBottomLeftRadius: 15,
-    borderBottomRightRadius: 15,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 2 }, shadowRadius: 3 },
-      android: { elevation: 3 },
-    }),
-  },
-  navbarRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15 },
-  navbarTitle: { color: '#fff', fontSize: 30, fontWeight: '600', textAlign: 'center', flex: 1 },
-  backButton: { width: 40, justifyContent: 'center', alignItems: 'center' },
-  backText: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
+  //navar
+ navbar: {
+  height: 105,
+  justifyContent: 'center',
+  borderBottomLeftRadius: 15,
+  borderBottomRightRadius: 15,
+  ...Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOpacity: 0.15,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 3,
+    },
+    android: { elevation: 3 },
+  }),
+},
+
+navbarRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 15,
+},
+
+navbarTitle: {
+  color: '#fff',
+  fontSize: 32,
+  fontWeight: '600',
+  textAlign: 'center',
+},
+
+button: {
+  flexDirection: "row",
+  backgroundColor: "#11bcffff",
+  paddingVertical: 10,
+  paddingHorizontal: 10,
+  borderRadius: 8,
+},
+
+text: {
+  color: "#fff",
+  marginLeft: 0,
+  fontSize: 16,
+  fontWeight: "500",
+},
+
+logoContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+
+logo: {
+  width: 80,
+  height: 90,
+},
+
+/////
+
 
   label: { alignSelf: 'flex-start', marginBottom: 5, fontWeight: '600', color: '#333' },
   input: {
@@ -313,18 +367,5 @@ inputWithIcon: {
   flex: 1,           // ocupa el espacio restante
   paddingVertical: 12,
 },
- button: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#6200ee",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  text: {
-    color: "#fff",
-    marginLeft: 6,
-    fontSize: 16,
-    fontWeight: "500",
-  },
+ 
 });

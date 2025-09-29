@@ -2,19 +2,17 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { Image, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Producto } from '../../data/products';
+import { Producto } from '../../../app/data/products';
 import { CategoriaConProductos } from '../../data/categories';
 import { API } from '../../ip/IpDirection';
-
-
 
 export default function Home() {
   const [categorias, setCategorias] = React.useState<CategoriaConProductos[]>([]);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = React.useState<number | null>(null);
   const [refreshing, setRefreshing] = React.useState(false);
   const [search, setSearch] = React.useState('');
-  const [menuOpen, setMenuOpen] = React.useState(false);
 
+  // Obtener categorías
   const fetchCategorias = async () => {
     try {
       const res = await fetch(`${API}/categories`);
@@ -33,6 +31,8 @@ export default function Home() {
         })) || [],
       }));
       setCategorias(categoriasData);
+      // Seleccionar automáticamente la primera categoría
+      if (categoriasData.length > 0) setCategoriaSeleccionada(categoriasData[0].CategoriesID);
     } catch (e) {
       console.error('Error al obtener categorías:', e);
     }
@@ -61,66 +61,11 @@ export default function Home() {
         categoria.products.length > 0
     );
 
-  const productosDestacados = categorias
-    .flatMap((c) => c.products)
-    .sort((a, b) => b.Price - a.Price)
-    .slice(0, 3);
-
   return (
     <ScrollView
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {/* Navbar */}
-      <View style={styles.navbar}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../../../assets/images/LogoFinal.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        <Text style={styles.navTitle}>HairLuxX</Text>
-
-        {/* Botón hamburguesa */}
-        <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={styles.hamburger}>
-          <View style={styles.bar}></View>
-          <View style={styles.bar}></View>
-          <View style={styles.bar}></View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Menú desplegable */}
-      {menuOpen && (
-       <View style={styles.dropdownMenu}>
-  <TouchableOpacity
-    style={styles.boton}
-    onPress={() => router.push('/(tabs)/login')}
-  >
-    <Image
-      source={require('../../../assets/images/login.png')}
-      style={styles.botonImagen}
-      resizeMode="contain"
-    />
-    <Text style={styles.botonTexto}>Inicio Sesión</Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity
-    style={styles.boton}
-    onPress={() => router.push('/(tabs)/register')}
-  >
-    <Image
-      source={require('../../../assets/images/register.png')}
-      style={styles.botonImagen}
-      resizeMode="contain"
-    />
-    <Text style={styles.botonTexto}>Registrarse</Text>
-  </TouchableOpacity>
-</View>
-
-      )}
-
       <View style={styles.container2}>
         {/* Buscador */}
         <TextInput
@@ -158,7 +103,7 @@ export default function Home() {
               </TouchableOpacity>
             ))
           ) : (
-            <Text style={styles.noResults}>No se encontró nada....</Text>
+            <Text style={styles.noResults}>No se encontró nada...</Text>
           )}
         </View>
 
@@ -181,146 +126,156 @@ export default function Home() {
                         ? { uri: `${API}${p.imageUri.startsWith('/') ? '' : '/'}${p.imageUri}` }
                         : require('../../../assets/images/noimg.png')
                     }
-                    style={{ width: '50%', height: 150, borderRadius: 6, marginBottom: 6 }}
+                    style={styles.productoImagen}
                   />
-                  <Text style={styles.productoNombre}>{p.Name_product}</Text>
-                  <Text style={styles.productoDescripcion}>{p.Description}</Text>
-                  <Text style={styles.productoCantidad}>Cantidad disponible: {p.Amount}</Text>
-                  <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
+                  <View style={styles.productoInfo}>
+                    <Text style={styles.productoNombre}>{p.Name_product}</Text>
+                    <Text style={styles.productoDescripcion}>{p.Description}</Text>
+                    <Text style={styles.productoCantidad}>Cantidad: {p.Amount}</Text>
+                    <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
+                  </View>
                 </View>
               ))}
           </View>
         )}
 
-        {/* Productos destacados */}
-        <View style={styles.destacadosContainer}>
-          <Text style={styles.sectionTitle}>Productos destacados</Text>
-          {productosDestacados.map((p: Producto) => (
-            <View key={p.ProductsID} style={styles.productoDestacado}>
-              <Text style={styles.productoNombre}>{p.Name_product} - {p.Price} Bs</Text>
-            </View>
-          ))}
+        {/* Crear cuenta / Iniciar sesión */}
+        <View style={styles.authContainer}>
+          <Text style={styles.authTitle}>Mejora tu experiencia</Text>
+          <View style={styles.authButtons}>
+            <TouchableOpacity style={styles.authButton} onPress={() => router.push('/(tabs)/register')}>
+              <Image
+                source={require('../../../assets/images/register.png')}
+                style={styles.authIcon}
+              />
+              <Text style={styles.authText}>Crear cuenta</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.authButton} onPress={() => router.push('/(tabs)/login')}>
+              <Image
+                source={require('../../../assets/images/login.png')}
+                style={styles.authIcon}
+              />
+              <Text style={styles.authText}>Iniciar sesión</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>© 2025 HairLux. Todos los derechos reservados.</Text>
-        </View>
+        {/* Tabla de promociones */}
+{/* Tabla de promociones */}
+<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 20 }}>
+  <View style={styles.promoContainer}>
+    <TouchableOpacity
+      style={styles.promoCard}
+      onPress={() => {
+        // Mostrar la primera categoría
+        if (categorias.length > 0) setCategoriaSeleccionada(categorias[0].CategoriesID);
+      }}
+    >
+      <Image source={require('../../../assets/images/productos.png')} style={styles.promoIcon} />
+      <Text style={styles.promoText}>Productos</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.promoCard}
+      onPress={() => {
+        // Seleccionar la categoría que tenga el producto más caro
+        let maxPriceProduct: Producto | null = null;
+        let maxCategoryId: number | null = null;
+        categorias.forEach((cat) => {
+          cat.products.forEach((p) => {
+            if (!maxPriceProduct || p.Price > maxPriceProduct.Price) {
+              maxPriceProduct = p;
+              maxCategoryId = cat.CategoriesID;
+            }
+          });
+        });
+        if (maxCategoryId) setCategoriaSeleccionada(maxCategoryId);
+      }}
+    >
+      <Image source={require('../../../assets/images/stock.png')} style={styles.promoIcon} />
+      <Text style={styles.promoText}>Stock</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.promoCard}
+      onPress={() => {
+        // Seleccionar la categoría que tenga el producto más barato
+        let minPriceProduct: Producto | null = null;
+        let minCategoryId: number | null = null;
+        categorias.forEach((cat) => {
+          cat.products.forEach((p) => {
+            if (!minPriceProduct || p.Price < minPriceProduct.Price) {
+              minPriceProduct = p;
+              minCategoryId = cat.CategoriesID;
+            }
+          });
+        });
+        if (minCategoryId) setCategoriaSeleccionada(minCategoryId);
+      }}
+    >
+      <Image source={require('../../../assets/images/promociones.png')} style={styles.promoIcon} />
+      <Text style={styles.promoText}>Promociones</Text>
+    </TouchableOpacity>
+  </View>
+</ScrollView>
+
+
+
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, margin: 0, marginTop: 0 },
+  container: { flex: 1, backgroundColor: '#fff' },
   container2: { margin: 15 },
 
-  navbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    backgroundColor: '#6200EE',
-  },
-  logoContainer: { flexDirection: 'row', alignItems: 'center' },
-  logo: { width: 80, height: 90},
+  searchInput: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#ccc', marginBottom: 15 },
 
- navTitle: {
-  color: '#fff',
-  fontSize: 30,
-  fontWeight: 'bold',
-  position: 'absolute',
-  left: 10,
-  right: 0,
-  textAlign: 'center',
-},
-
-  hamburger: {
-  padding: 10,
-  position: 'absolute',
-  right: 15,
-  top: 40,
-  zIndex: 10,
-},
-
-  bar: { width: 25, height: 3, backgroundColor: '#fff', marginVertical: 2, borderRadius: 2 },
-
- dropdownMenu: {
-  backgroundColor: '#f5f5f5',
-  flexDirection: 'row',          // <- fila para que queden lado a lado
-  justifyContent: 'space-between', // <- separa los botones
-  flexWrap: 'wrap',              // <- si hay más botones bajan a otra fila
-  paddingVertical: 10,
-  paddingHorizontal: 10,
-  borderRadius: 8,
-  marginTop: 5,
-},
-
-
-  buttonsContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  navButton: {
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    backgroundColor: '#BB86FC',
-    borderRadius: 6,
-    flexDirection: 'row',
-    gap: 4,
-  },
-  navButtonText: { color: '#fff', fontWeight: 'bold' },
-  buttonIcon: { width: 24, height: 24 },
-
-  searchInput: { marginTop: 15, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
-
-  categoriasContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginTop: 20 },
-  categoriaItem: { paddingVertical: 10, paddingHorizontal: 8, borderRadius: 8, margin: 5, backgroundColor: '#EDE7F6', minWidth: '28%', alignItems: 'center' },
+  categoriasContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginBottom: 20 },
+  categoriaItem: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, margin: 5, backgroundColor: '#EDE7F6', minWidth: '28%', alignItems: 'center' },
   categoriaSeleccionada: { backgroundColor: '#6200EE' },
-  categoriaText: { color: '#000' },
-  categoriaTextSeleccionada: { color: '#fff' },
+  categoriaText: { color: '#000', fontWeight: '500' },
+  categoriaTextSeleccionada: { color: '#fff', fontWeight: '600' },
 
-  productosContainer: { marginTop: 20 },
-  productoItem: { padding: 12, borderRadius: 12, marginBottom: 10, backgroundColor: '#fff', elevation: 2 },
-  productoNombre: { fontWeight: 'bold' },
-  productoDescripcion: { fontStyle: 'italic', color: '#555' },
-  productoCantidad: { color: '#333', marginTop: 4 },
-  productoPrecio: { fontWeight: 'bold', marginTop: 4 },
+  productosContainer: { marginBottom: 30 },
+  sectionTitle: { fontSize: 20, fontWeight: '700', marginBottom: 10 },
+  productoItem: { flexDirection: 'row', padding: 12, borderRadius: 12, marginBottom: 10, backgroundColor: '#f9f9f9', elevation: 2 },
+  productoImagen: { width: 120, height: 120, borderRadius: 12, marginRight: 12 },
+  productoInfo: { flex: 1 },
+  productoNombre: { fontWeight: '700', fontSize: 16, marginBottom: 4 },
+  productoDescripcion: { fontStyle: 'italic', color: '#555', marginBottom: 4 },
+  productoCantidad: { color: '#333', marginBottom: 2 },
+  productoPrecio: { fontWeight: '700', color: '#6200EE' },
 
-  noResults: { marginTop: 20, fontStyle: 'italic', color: '#555' },
+  noResults: { marginTop: 20, fontStyle: 'italic', color: '#555', textAlign: 'center' },
+/////inicio sesion
+  authContainer: { marginTop: 20, alignItems: 'center' },
+  authTitle: { fontSize: 18, fontWeight: '600', marginBottom: 12 },
+  authButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  authButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#cdc4f5ff', padding: 12, borderRadius: 12, flex: 1, marginHorizontal: 5 },
+  authIcon: { width: 50, height: 50, marginRight: 10 },
+  authText: { fontWeight: '700', fontSize: 16 },
 
-  destacadosContainer: { marginTop: 20 },
-  productoDestacado: { padding: 10, marginBottom: 8, backgroundColor: '#FFE082', borderRadius: 8 },
+  ////columna 3
+  promoContainer: {
+  flexDirection: 'row',
+  paddingHorizontal: 10,
+  gap: 12,
+},
 
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 10 },
-
-  footer: { marginTop: 30, alignItems: 'center', paddingVertical: 10 },
-  footerText: { fontSize: 12, color: '#888' },
-  
-boton: {
-  width: '48%',                   // para que dos quepan en la misma fila
+promoCard: {
+  width: 120,
   height: 120,
+  backgroundColor: '#e6d7ff',
   borderRadius: 12,
-  backgroundColor: '#cdc4f5ff',
-  alignItems: 'center',
   justifyContent: 'center',
-  marginBottom: 10,
-  elevation: 4,
-  shadowColor: '#000',
-  shadowOpacity: 0.1,
-  shadowOffset: { width: 0, height: 2 },
-  shadowRadius: 4,
-  padding: 10,
+  alignItems: 'center',
+  elevation: 2,
 },
 
-botonImagen: {
-  width: 70,
-  height: 70,
-  marginBottom: 8,
-},
-
-botonTexto: {
-  fontWeight: 'bold',
-  textAlign: 'center',
-}
+promoIcon: { width: 50, height: 50, marginBottom: 8 },
+promoText: { fontWeight: '700', fontSize: 14, textAlign: 'center' },
 
 });
