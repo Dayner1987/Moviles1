@@ -1,9 +1,12 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from './generated/prisma/index.js';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import multer from 'multer';
 import bodyParser from 'body-parser';
+import jwt from 'jsonwebtoken';
+// CORRECTO en TypeScript
+import { JwtPayload } from './JwtPayload.js';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -11,8 +14,13 @@ app.use(express.json());
 app.use(bodyParser.json());
 
 
-
-
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload; // esto le dice a TS que req.user existe
+    }
+  }
+}
 // Carpeta pública para servir imágenes
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -28,180 +36,75 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-//login 
+
+////////////////
+//JWT 
+///////////
+// Login con JWT
 app.post('/auth/login', async (req: Request, res: Response) => {
   try {
     const { identifier, password } = req.body;
+    if (!identifier || !password) return res.status(400).json({ error: 'Faltan datos' });
 
-    if (!identifier || !password) {
-      return res.status(400).json({ error: 'Faltan datos' });
-    }
-
-    // Validar si es CI o Email
-    let whereClause;
+    // Determinar si identifier es CI o Email
     const ciNumber = Number(identifier);
+    const whereClause = !isNaN(ciNumber)
+      ? { CI: ciNumber }
+      : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)
+      ? { Email: identifier }
+      : null;
 
-    if (!isNaN(ciNumber)) {
-      whereClause = { CI: ciNumber };
-    } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
-      whereClause = { Email: identifier };
-    } else {
-      return res.status(400).json({ error: 'ID o Email inválido' });
-    }
+    if (!whereClause) return res.status(400).json({ error: 'ID o Email inválido' });
 
     const user = await prisma.users.findFirst({ where: whereClause });
-
-    if (!user) {
-      return res.status(401).json({ error: 'Usuario no encontrado' });
-    }
+    if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
 
     const validPassword = await bcrypt.compare(password, user.Password);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Contraseña incorrecta' });
-    }
+    if (!validPassword) return res.status(401).json({ error: 'Contraseña incorrecta' });
 
+    // Determinar rol
     let role = '';
     if (user.Roles_RolesID === 1) role = 'Cliente';
     else if (user.Roles_RolesID === 2) role = 'Empleado';
     else if (user.Roles_RolesID === 3) role = 'Administrador';
 
-    res.json({ id: user.clientID, role });
+    // Generar JWT datos dentro del token
+    const token = jwt.sign(
+      {
+        id: user.clientID,
+        role,
+        name: user.Name1,
+        email: user.Email
+      },
+      'MI_SECRETO', // en producción usar process.env.JWT_SECRET token
+      { expiresIn: '1h' }
+    );
+
+    res.json({ token, id: user.clientID, role });
 
   } catch (e: any) {
     console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
+///middleware rutas protegidas
 
 
-// Crear categoría POST
+export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader?.split(' ')[1]; // Bearer <token>
 
-app.post('/categories', async (req: Request, res: Response) => {
+  if (!token) return res.status(401).json({ error: 'Token requerido' });
+
   try {
-    const { Name_categories } = req.body;
-    const newCategory = await prisma.categories.create({
-      data: { Name_categories }
-    });
-    res.status(201).json(newCategory);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    const decoded = jwt.verify(token, 'MI_SECRETO') as JwtPayload;
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(403).json({ error: 'Token inválido' });
   }
-});
-//tener categoria
-app.get('/categories', async (req: Request, res: Response) => {
-  try {
-    const categories = await prisma.categories.findMany({ include: { products: true } });
-    res.json(categories);
-  } catch (e: any) {
-    console.error('Error en /categories:', e); // imprime el error completo en la consola
-    res.status(500).json({ error: e.message });
-  }
-});
+};
 
-
-
-
-// ACTUALIZAR CATEGORIA PUT 
-app.put('/categories/:id', async (req: Request, res: Response) => {
-  try {
-    const CategoriesID = parseInt(req.params.id);
-    const { Name_categories } = req.body;
-
-    const updatedCategory = await prisma.categories.update({
-      where: { CategoriesID },
-      data: { Name_categories }
-    });
-
-    res.json(updatedCategory);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-// ELIMINAR CATEGORIA 
-app.delete('/categories/:id', async (req: Request, res: Response) => {
-  try {
-    const CategoriesID = parseInt(req.params.id);
-
-    await prisma.categories.delete({
-      where: { CategoriesID }
-    });
-
-    res.json({ message: 'Categoría eliminada correctamente.' });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Agregar productos
-
-app.post('/products', upload.single('image'), async (req: Request, res: Response) => {
-  try {
-    const { Name_product, Price, Description, Amount, CategoryID } = req.body;
-    const imageUri = req.file ? `/uploads/${req.file.filename}` : null;
-
-    const product = await prisma.products.create({
-      data: {
-        Name_product,
-        Price: parseFloat(Price),
-        Description,
-        Amount: parseInt(Amount),
-        CategoryID: parseInt(CategoryID),
-        imageUri,
-      },
-    });
-
-    res.status(201).json(product);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get('/products', async (req: Request, res: Response) => {
-  try {
-    const products = await prisma.products.findMany({
-      include: {
-        categories: true, // 👈 incluye la categoría relacionada
-      },
-    });
-    res.json(products);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-
-
-
-// Actualizar un producto PUT
-app.put('/products/:id', async (req: Request, res: Response) => {
-  try {
-    const ProductsID = parseInt(req.params.id);
-    const { CategoryID, Name_product, Price, Description, Amount } = req.body;
-
-    const updatedProduct = await prisma.products.update({
-      where: { ProductsID },
-      data: { CategoryID, Name_product, Price, Description, Amount },
-    });
-
-    res.json(updatedProduct);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-// delete productos
-app.delete('/products/:id', async (req: Request, res: Response) => {
-  try {
-    const ProductsID = parseInt(req.params.id);
-
-    await prisma.products.delete({
-      where: { ProductsID }
-    });
-
-    res.json({ message: 'Producto eliminado correctamente.' });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
 // ---------------------
 // CRUD EMPLEADOS (users)
 // ---------------------
@@ -294,29 +197,59 @@ app.get('/users', async (req: Request, res: Response) => {
   }
 });
 
-// Actualizar USUARIOS
+// ✅ Actualizar USUARIO
 app.put('/users/:id', async (req: Request, res: Response) => {
   try {
     const clientID = parseInt(req.params.id);
-    const { Roles_RolesID, Name1, Name2, LastName1, LastName2, CI, Address, Password } = req.body;
+    if (isNaN(clientID)) {
+      return res.status(400).json({ error: "ID inválido" });
+    }
+
+    const existingUser = await prisma.users.findUnique({ where: { clientID } });
+    if (!existingUser) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const {
+      Roles_RolesID,
+      Name1,
+      Name2,
+      LastName1,
+      LastName2,
+      CI,
+      Email,
+      Address,
+      Password,
+    } = req.body;
+
+    // Hashear contraseña solo si se envía una nueva
+    let hashedPassword = existingUser.Password;
+    if (Password && Password.trim() !== "") {
+      hashedPassword = await bcrypt.hash(Password, 10);
+    }
 
     const updatedUser = await prisma.users.update({
       where: { clientID },
       data: {
-        Roles_RolesID,
-        Name1,
-        Name2,
-        LastName1,
-        LastName2,
-        CI,
-        Address,
-        Password,
+        Roles_RolesID: Roles_RolesID ?? existingUser.Roles_RolesID,
+        Name1: Name1 ?? existingUser.Name1,
+        Name2: Name2 ?? existingUser.Name2,
+        LastName1: LastName1 ?? existingUser.LastName1,
+        LastName2: LastName2 ?? existingUser.LastName2,
+        CI: CI ?? existingUser.CI,
+        Email: Email ?? existingUser.Email,
+        Address: Address ?? existingUser.Address,
+        Password: hashedPassword,
       },
     });
 
-    res.json(updatedUser);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res.json({
+      message: "Usuario actualizado correctamente",
+      user: updatedUser,
+    });
+  } catch (error: any) {
+    console.error("Error al actualizar usuario:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -353,6 +286,136 @@ app.get('/users/:id', async (req: Request, res: Response) => {
 
 
 // ---------------------
+
+// Agregar productos
+
+app.post('/products', upload.single('image'), async (req: Request, res: Response) => {
+  try {
+    const { Name_product, Price, Description, Amount, CategoryID } = req.body;
+    const imageUri = req.file ? `/uploads/${req.file.filename}` : null;
+
+    const product = await prisma.products.create({
+      data: {
+        Name_product,
+        Price: parseFloat(Price),
+        Description,
+        Amount: parseInt(Amount),
+        CategoryID: parseInt(CategoryID),
+        imageUri,
+      },
+    });
+
+    res.status(201).json(product);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/products', async (req: Request, res: Response) => {
+  try {
+    const products = await prisma.products.findMany({
+      include: {
+        categories: true, // 👈 incluye la categoría relacionada
+      },
+    });
+    res.json(products);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// Crear categoría POST
+
+app.post('/categories', async (req: Request, res: Response) => {
+  try {
+    const { Name_categories } = req.body;
+    const newCategory = await prisma.categories.create({
+      data: { Name_categories }
+    });
+    res.status(201).json(newCategory);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+//tener categoria
+app.get('/categories', async (req: Request, res: Response) => {
+  try {
+    const categories = await prisma.categories.findMany({ include: { products: true } });
+    res.json(categories);
+  } catch (e: any) {
+    console.error('Error en /categories:', e); // imprime el error completo en la consola
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+
+
+// ACTUALIZAR CATEGORIA PUT 
+app.put('/categories/:id', async (req: Request, res: Response) => {
+  try {
+    const CategoriesID = parseInt(req.params.id);
+    const { Name_categories } = req.body;
+
+    const updatedCategory = await prisma.categories.update({
+      where: { CategoriesID },
+      data: { Name_categories }
+    });
+
+    res.json(updatedCategory);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+// ELIMINAR CATEGORIA 
+app.delete('/categories/:id', async (req: Request, res: Response) => {
+  try {
+    const CategoriesID = parseInt(req.params.id);
+
+    await prisma.categories.delete({
+      where: { CategoriesID }
+    });
+
+    res.json({ message: 'Categoría eliminada correctamente.' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+
+// Actualizar un producto PUT
+app.put('/products/:id', async (req: Request, res: Response) => {
+  try {
+    const ProductsID = parseInt(req.params.id);
+    const { CategoryID, Name_product, Price, Description, Amount } = req.body;
+
+    const updatedProduct = await prisma.products.update({
+      where: { ProductsID },
+      data: { CategoryID, Name_product, Price, Description, Amount },
+    });
+
+    res.json(updatedProduct);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+// delete productos
+app.delete('/products/:id', async (req: Request, res: Response) => {
+  try {
+    const ProductsID = parseInt(req.params.id);
+
+    await prisma.products.delete({
+      where: { ProductsID }
+    });
+
+    res.json({ message: 'Producto eliminado correctamente.' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ROLES DE LOS USUARIOS 
 // ---------------------
 
@@ -643,6 +706,30 @@ app.post('/orders/cart', async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error("Error creando orden:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+//obtener ordenes desde el cliente
+// GET /orders/user/:userId
+app.get('/orders/user/:userId', async (req: Request, res: Response) => {
+  const userId = parseInt(req.params.userId);
+  if (isNaN(userId)) return res.status(400).json({ error: "ID inválido" });
+
+  try {
+    const orders = await prisma.orders.findMany({
+      where: { UserID: userId },
+      include: {
+        users: true,
+        items: { include: { product: true } },
+        order_status: true,
+      },
+      orderBy: { Date_order: 'desc' },
+    });
+
+    res.json(orders);
+  } catch (error: any) {
+    console.error("Error al obtener órdenes:", error);
     res.status(500).json({ error: error.message });
   }
 });
