@@ -9,3 +9,5 @@ export type OrderItem = {
   order?: Producto;
   product?: Producto;
 };
+const _dummy = () => null;
+export default _dummy;

@@ -25,3 +25,5 @@ export type Order = {
 
 // Array vacío
 export const orders: Order[] = [];
+const _dummy = () => null;
+export default _dummy;

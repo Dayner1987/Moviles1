@@ -265,25 +265,25 @@ app.delete('/users/:id', async (req: Request, res: Response) => {
 });
 
 // Obtener usuario por ID
+// backend /users/:id
 app.get('/users/:id', async (req: Request, res: Response) => {
   try {
     const clientID = parseInt(req.params.id);
+    if (isNaN(clientID)) return res.status(400).json({ error: 'ID inválido' });
+
     const user = await prisma.users.findUnique({
       where: { clientID },
       include: { roles: true },
     });
 
-    if (!user) {
-      return res.status(404).json({ error: 'Usuario no encontrado.' });
-    }
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    res.json(user);
+    res.json(user); // <-- retorna user directamente
   } catch (e: any) {
     console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
-
 
 // ---------------------
 
@@ -737,6 +737,23 @@ app.get('/orders/user/:userId', async (req: Request, res: Response) => {
 // ---------------------
 // Company
 // ---------------------
+//GET COMPANY
+app.get("/company", async (req, res) => {
+  try {
+    const company = await prisma.company.findMany({
+      orderBy: { CompanyID: "asc" },
+    });
+
+    if (!company || company.length === 0) {
+      return res.status(404).json({ error: "No hay información registrada de la empresa." });
+    }
+
+    res.json(company);
+  } catch (error) {
+    console.error("Error al obtener la empresa:", error);
+    res.status(500).json({ error: "Error al obtener la empresa" });
+  }
+});
 
 // POST crear company (solo se debería usar una vez)
 app.post("/company", async (req, res) => {

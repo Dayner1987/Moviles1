@@ -7,3 +7,5 @@ export type CategoriaConProductos = {
 };
 
 export const categorias: CategoriaConProductos[] = [];
+const _dummy = () => null;
+export default _dummy;

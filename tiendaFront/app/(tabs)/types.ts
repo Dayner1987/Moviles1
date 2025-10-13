@@ -1,16 +1,17 @@
-export type TabsStackParamList = { 
+// app/(tabs)/types.ts
+
+export type TabsStackParamList = {
   Home: undefined;
   Login: undefined;
   Register: undefined;
   ClientHome: undefined;
-  EmployeeHome: undefined; 
+  EmployeeHome: undefined;
   AdminHome: undefined;
 
-  AddProducts: undefined;
+  UserConE: undefined;
   ManageProducts: undefined;
   Orders: undefined;
   Search: undefined;
-  Search2: undefined;
   OrderStatus: undefined;
 
   NewProducts: undefined;
@@ -20,5 +21,12 @@ export type TabsStackParamList = {
   // nuevas para swipe
   PayClient: undefined;
   OrdersClient: undefined;
-  UserCon:undefined
+  UserCon: undefined;
+
+  Company: undefined;
+  CompanyInfo: undefined;
 };
+
+// Dummy export para que expo-router no genere warnings
+const _dummy = () => null;
+export default _dummy;

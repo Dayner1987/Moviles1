@@ -40,8 +40,8 @@ export default function Login() {
 
       // Redirigir según rol
       if (data.role === 'Cliente') router.push('/(tabs)/others/Home');
-      else if (data.role === 'Empleado') router.push('/EmployeeHome');
-      else if (data.role === 'Administrador') router.push('/AdminHome');
+      else if (data.role === 'Empleado') router.push('/(tabs)/operations/EmployeeHome');
+      else if (data.role === 'Administrador') router.push('/(tabs)/opAdmin/AdminHome');
       else setErrorMsg('Rol no autorizado');
 
     } catch (err) {

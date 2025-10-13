@@ -5,3 +5,5 @@ export type Rol = {
 
 // Array vacío
 export const roles: Rol[] = [];
+const _dummy = () => null;
+export default _dummy;

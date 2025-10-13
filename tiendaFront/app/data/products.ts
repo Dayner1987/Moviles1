@@ -15,3 +15,5 @@ export type Producto = {
 
 // Array vacío que se llenará desde el backend
 export const productos: Producto[] = [];
+const _dummy = () => null;
+export default _dummy;

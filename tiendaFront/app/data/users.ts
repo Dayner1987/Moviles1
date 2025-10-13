@@ -16,3 +16,5 @@ export type Usuario = {
 
 // Array vacío
 export const users: Usuario[] = [];
+const _dummy = () => null;
+export default _dummy;

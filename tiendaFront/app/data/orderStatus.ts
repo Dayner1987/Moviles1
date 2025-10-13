@@ -5,3 +5,5 @@ export type OrderStatus = {
 
 // Array vacío
 export const orderStatus: OrderStatus[] = [];
+const _dummy = () => null;
+export default _dummy;
