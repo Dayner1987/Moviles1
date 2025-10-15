@@ -6,7 +6,7 @@ import React from 'react';
 import Home from './app/(tabs)/others/Home';
 import Login from './app/(tabs)/login';
 import Register from './app/(tabs)/register';
-import AdminHome from './app/(tabs)/opAdmin/AdminHome';
+import AdminHome from './app/(tabs)/opAdmin/UserConA';
 import EmployeeHome from './app/(tabs)/operations/EmployeeHome';
 import { TabsStackParamList } from './app/(tabs)/types';
 

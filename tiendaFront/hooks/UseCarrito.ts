@@ -1,4 +1,4 @@
-// hooks/UseCarrito.ts
+// hooks/useCarrito.ts
 import { useEffect, useState } from 'react';
 import { Producto } from '../app/data/products';
 
@@ -9,12 +9,12 @@ let suscriptores: ((carrito: Producto[]) => void)[] = [];
 export const useCarrito = () => {
   const [carrito, setCarrito] = useState<Producto[]>(carritoGlobal);
 
-  // Función para notificar a todos los componentes
+  // Notificar a todos los componentes
   const notificarCambio = (nuevoCarrito: Producto[]) => {
     suscriptores.forEach(fn => fn(nuevoCarrito));
   };
 
-  // Suscribirse a los cambios del carrito
+  // Suscribirse a los cambios
   useEffect(() => {
     const suscriptor = (nuevoCarrito: Producto[]) => setCarrito([...nuevoCarrito]);
     suscriptores.push(suscriptor);
@@ -24,6 +24,7 @@ export const useCarrito = () => {
     };
   }, []);
 
+  // ➕ Agregar producto
   const agregarAlCarrito = (producto: Producto) => {
     const yaEnCarrito = carritoGlobal.some(item => item.ProductsID === producto.ProductsID);
     if (!yaEnCarrito) {
@@ -32,10 +33,17 @@ export const useCarrito = () => {
     }
   };
 
+  // 🗑️ Eliminar producto
+  const eliminarDelCarrito = (id: number) => {
+    carritoGlobal = carritoGlobal.filter(item => item.ProductsID !== id);
+    notificarCambio(carritoGlobal);
+  };
+
+  // 🧹 Limpiar todo
   const limpiarCarrito = () => {
     carritoGlobal = [];
     notificarCambio(carritoGlobal);
   };
 
-  return { carrito, agregarAlCarrito, limpiarCarrito };
+  return { carrito, agregarAlCarrito, eliminarDelCarrito, limpiarCarrito };
 };

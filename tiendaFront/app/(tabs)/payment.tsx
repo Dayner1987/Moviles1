@@ -1,31 +1,33 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
+import { jwtDecode } from 'jwt-decode';
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   FlatList,
   Image,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  RefreshControl,
-  Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { jwtDecode } from 'jwt-decode';
 import { useCarrito } from '../../hooks/UseCarrito';
+import { Company1, companyData } from '../data/company'; // ✅ Importa la empresa
 import { JwtPayload } from '../data/jwtPayload';
 import { API } from '../ip/IpDirection';
-import { router } from 'expo-router';
 
 export default function Payment() {
   const { carrito, limpiarCarrito } = useCarrito();
   const [metodoPago, setMetodoPago] = useState<'qr' | 'efectivo'>('qr');
   const [refreshing, setRefreshing] = useState(false);
   const [cliente, setCliente] = useState<JwtPayload | null>(null);
-
+  const [empresa, setEmpresa] = useState<Company1 | null>(null); // ✅ empresa
   const total = carrito.reduce((sum, item) => sum + item.Price, 0);
 
   useEffect(() => {
     obtenerCliente();
+    obtenerEmpresa();
   }, []);
 
   const obtenerCliente = async () => {
@@ -37,6 +39,27 @@ export default function Payment() {
       }
     } catch (err) {
       console.error('Error al obtener cliente:', err);
+    }
+  };
+
+  const obtenerEmpresa = async () => {
+    try {
+      // Si companyData ya tiene la información, úsala directamente
+      if (companyData.length > 0) {
+        setEmpresa(companyData[0]);
+        return;
+      }
+
+      // Si no, trae la empresa desde el backend
+      const res = await fetch(`${API}/company`);
+      if (res.ok) {
+        const data = await res.json();
+        setEmpresa(data[0]);
+      } else {
+        console.error('Error al obtener datos de empresa:', await res.text());
+      }
+    } catch (error) {
+      console.error('Error al cargar empresa:', error);
     }
   };
 
@@ -54,6 +77,7 @@ export default function Payment() {
       Alert.alert('Error', 'No se pudo obtener la información del cliente');
       return;
     }
+
     try {
       const productos = carrito.map((item) => ({
         ProductID: item.ProductsID,
@@ -68,7 +92,7 @@ export default function Payment() {
           UserID: cliente.id,
           productos,
           metodoPago,
-          direccion: 'Entrega en el local de la empresa',
+          direccion: empresa?.Address || 'Entrega en el local',
         }),
       });
 
@@ -79,7 +103,10 @@ export default function Payment() {
       }
 
       limpiarCarrito();
-      Alert.alert('Éxito', 'Pago registrado. Retira tus productos en el local.');
+      Alert.alert(
+        'Éxito',
+        `Pago registrado. Retira tus productos en ${empresa?.Address || 'el local de la empresa'}.`
+      );
       router.push('/(tabs)/others/Home');
     } catch (error) {
       console.error('Error al crear la orden:', error);
@@ -87,7 +114,7 @@ export default function Payment() {
     }
   };
 
-  // Componente header para FlatList
+  // Header de la lista
   const ListHeader = () => (
     <View>
       <Text style={styles.title}>Pago</Text>
@@ -114,10 +141,17 @@ export default function Payment() {
           <Text>Escanea este código QR para pagar:</Text>
           <Image
             source={{
-              uri: 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PagoEnLocal',
+              uri:
+                empresa?.QRImage ||
+                'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PagoEnLocal',
             }}
-            style={{ width: 150, height: 150, marginTop: 10 }}
+            style={{ width: 150, height: 150, marginTop: 10, borderRadius: 10 }}
           />
+          {empresa?.Address && (
+            <Text style={{ marginTop: 10, textAlign: 'center' }}>
+              Dirección: {empresa.Address}
+            </Text>
+          )}
         </View>
       )}
 
@@ -127,7 +161,9 @@ export default function Payment() {
           <Text style={styles.clientText}>Nombre: {cliente.name}</Text>
           <Text style={styles.clientText}>Correo: {cliente.email || 'Sin correo'}</Text>
           <Text style={styles.clientText}>Rol: {cliente.role}</Text>
-          <Text style={styles.clientText}>Entrega: En el local de la empresa</Text>
+          <Text style={styles.clientText}>
+            Entrega: {empresa?.Address || 'En el local de la empresa'}
+          </Text>
         </View>
       )}
 
@@ -136,7 +172,7 @@ export default function Payment() {
     </View>
   );
 
-  // Footer para FlatList (botón finalizar)
+  // Footer con botón de pago
   const ListFooter = () => {
     if (carrito.length === 0) return null;
     return (

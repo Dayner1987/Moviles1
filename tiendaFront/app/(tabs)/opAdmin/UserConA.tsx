@@ -15,7 +15,7 @@ import { CategoriaConProductos } from '../../data/categories';
 import { Producto } from '../../data/products';
 import { API } from '../../ip/IpDirection';
 
-export default function AdminHome() {
+export default function UserConA() {
   const [categorias, setCategorias] = useState<CategoriaConProductos[]>([]);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);

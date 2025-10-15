@@ -386,21 +386,36 @@ app.delete('/categories/:id', async (req: Request, res: Response) => {
 
 
 // Actualizar un producto PUT
-app.put('/products/:id', async (req: Request, res: Response) => {
+app.put('/products/:id', upload.single('image'), async (req: Request, res: Response) => {
   try {
-    const ProductsID = parseInt(req.params.id);
-    const { CategoryID, Name_product, Price, Description, Amount } = req.body;
+    const { Name_product, Price, Description, Amount, CategoryID } = req.body;
+    const id = parseInt(req.params.id);
 
-    const updatedProduct = await prisma.products.update({
-      where: { ProductsID },
-      data: { CategoryID, Name_product, Price, Description, Amount },
+    // Obtener producto existente
+    const existing = await prisma.products.findUnique({ where: { ProductsID: id } });
+    if (!existing) return res.status(404).json({ error: 'Producto no encontrado' });
+
+    // Si se sube nueva imagen, usarla; si no, mantener la anterior
+    const imageUri = req.file ? `/uploads/${req.file.filename}` : existing.imageUri;
+
+    const updated = await prisma.products.update({
+      where: { ProductsID: id },
+      data: {
+        Name_product,
+        Price: parseFloat(Price),
+        Description,
+        Amount: parseInt(Amount),
+        CategoryID: parseInt(CategoryID),
+        imageUri,
+      },
     });
 
-    res.json(updatedProduct);
+    res.json(updated);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
+
 // delete productos
 app.delete('/products/:id', async (req: Request, res: Response) => {
   try {
@@ -812,6 +827,6 @@ app.put("/company/:id", async (req, res) => {
 // ---------------------
 // Iniciar servidor
 // ---------------------
-app.listen(3000, '192.168.100.157', () => {
+app.listen(3000, '192.168.100.99', () => {
   console.log('Servidor corriendo en http://localhost:3000');
 });

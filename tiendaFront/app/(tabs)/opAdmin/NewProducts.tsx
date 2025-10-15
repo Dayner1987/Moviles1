@@ -1,21 +1,21 @@
-import { CategoriaConProductos } from "@/app/data/categories";
-import { Producto } from "@/app/data/products";
-import { API } from "@/app/ip/IpDirection";
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
 import LottieView from 'lottie-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Image, RefreshControl,
+  Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
-  Text, TextInput, TouchableOpacity,
-  View
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
-
-
+import { CategoriaConProductos } from '../../data/categories';
+import { Producto } from '../../data/products';
+import { API } from '../../ip/IpDirection';
 
 export default function NewProducts() {
   const [refreshing, setRefreshing] = useState(false);
@@ -28,37 +28,57 @@ export default function NewProducts() {
   const [categorias, setCategorias] = useState<CategoriaConProductos[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [editId, setEditId] = useState<number | null>(null);
-    const [categoriaSeleccionada, setCategoriaSeleccionada] = React.useState<number | null>(null);
-    const [errorMsg, setErrorMsg] = useState('');
-    const [showSuccess, setShowSuccess] = useState(false);
-
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = React.useState<number | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 // Guardar producto
 const guardarProducto = async () => {
-  // Validación de campos obligatorios
-  if (!nombre.trim() || !precio.trim() || !amount.trim() || !categoryID.trim()) {
-  
-    setErrorMsg('Completa todos lo campos ');
+  if (!nombre.trim() || !precio.trim() || !amount.trim() || (!selectedCategory && !newCategory.trim())) {
+    setErrorMsg('Completa todos los campos');
     return;
   }
 
-  // Validar que precio y cantidad sean números válidos
   const precioNum = parseFloat(precio);
   const amountNum = parseInt(amount);
   if (isNaN(precioNum) || isNaN(amountNum)) {
-    setErrorMsg('precio y cantidad deben ser validos  ');
+    setErrorMsg('Precio y cantidad deben ser válidos');
     return;
   }
 
-  const prodData = {
-    Name_product: nombre,
-    Price: precioNum,
-    Description: descripcion || undefined, // opcional
-    Amount: amountNum,
-    CategoryID: parseInt(categoryID),
-    imageUri: imageUri || undefined, // opcional
-  };
-
   try {
+    let categoryToUse = categoryID; // categoría existente
+
+    // 🆕 Si el usuario escribió una nueva categoría:
+    if (newCategory.trim()) {
+      const resCat = await fetch(`${API}/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ Name_categories: newCategory.trim() }),
+      });
+
+      if (!resCat.ok) throw new Error('Error al crear nueva categoría');
+      const newCatData = await resCat.json();
+
+      // asignamos el ID de la categoría creada
+      categoryToUse = newCatData.CategoriesID.toString();
+
+      // refrescamos lista de categorías
+      setCategorias([...categorias, newCatData]);
+      setNewCategory('');
+    }
+
+    // 🛒 Luego creamos el producto normalmente
+    const prodData = {
+      Name_product: nombre,
+      Price: precioNum,
+      Description: descripcion || undefined,
+      Amount: amountNum,
+      CategoryID: parseInt(categoryToUse),
+      imageUri: imageUri || undefined,
+    };
+
     const method = editId ? 'PUT' : 'POST';
     const url = editId ? `${API}/products/${editId}` : `${API}/products`;
 
@@ -68,25 +88,22 @@ const guardarProducto = async () => {
       body: JSON.stringify(prodData),
     });
 
-    if (!response.ok) {
-      throw new Error('Error al guardar el producto');
-    }
-
+    if (!response.ok) throw new Error('Error al guardar el producto');
     const data = await response.json();
 
     if (editId) {
-      // Actualiza el producto en la lista
       setProductos(productos.map(p => p.ProductsID === editId ? data : p));
     } else {
-      // Agrega nuevo producto
       setProductos([...productos, data]);
     }
 
     resetForm();
-  } catch (error: any) {
-    setErrorMsg('No se pudo guardar el producto!!  ');
+  } catch (error) {
+    console.error(error);
+    setErrorMsg('No se pudo guardar el producto');
   }
 };
+
 
 // Editar producto: llena el formulario
 const editarProducto = (p: Producto) => {
@@ -137,8 +154,10 @@ const eliminarProducto = async () => {
         console.error(e);
       }
     };
+    setCategoryID('');
     fetchCategorias();
   }, []);
+
 
   // Cargar productos
   useEffect(() => {
@@ -194,206 +213,201 @@ const onRefresh = async () => {
 
 
  return (
-  <>
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-        />
-      }
-    >
-      {/* Navbar */}
-      <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>HairLux</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      {/* Formulario */}
-      <View style={styles.form}>
-        <Text style={styles.label}>Nombre</Text>
-        <TextInput style={styles.input} value={nombre} onChangeText={setNombre} />
-
-        <Text style={styles.label}>Precio</Text>
-        <TextInput style={styles.input} value={precio} onChangeText={setPrecio} keyboardType="numeric" />
-
-        <Text style={styles.label}>Descripción</Text>
-        <TextInput style={styles.input} value={descripcion} onChangeText={setDescripcion} />
-
-        <Text style={styles.label}>Cantidad</Text>
-        <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="numeric" />
-
-        <Text style={styles.label}>Categoría</Text>
-        <Picker
-          selectedValue={categoryID}
-          onValueChange={(val) => setCategoryID(val)}
-          style={styles.picker}
-        >
-          <Picker.Item label="Selecciona categoría" value="" />
-          {categorias.map(c => (
-            <Picker.Item key={c.CategoriesID} label={c.Name_categories} value={c.CategoriesID.toString()} />
-          ))}
-        </Picker>
-
-        <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-          <Text style={styles.imageButtonText}>{imageUri ? 'Cambiar imagen' : 'Seleccionar imagen'}</Text>
-        </TouchableOpacity>
-        {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
-
-        <TouchableOpacity style={styles.saveButton} onPress={guardarProducto}>
-          <Text style={styles.saveButtonText}>{editId ? 'Actualizar Producto' : 'Crear Producto'}</Text>
-        </TouchableOpacity>
-
-        {editId && (
-          <TouchableOpacity style={styles.cancelButton} onPress={resetForm}>
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
-          </TouchableOpacity>
-        )}
-
-        {errorMsg && (
-          <Animatable.View animation="shake" style={styles.errorBox}>
-            <Text style={styles.errorText}>{errorMsg}</Text>
-            <View style={styles.errorIcon}>
-              <Text style={styles.errorIconText}>!</Text>
-            </View>
-          </Animatable.View>
-        )}
-      </View>
-
-      {/* Lista de categorías */}
-      <View style={styles.categoriasContainer}>
-        {categorias.length > 0 ? (
-          categorias.map((categoria) => (
-            <TouchableOpacity
-              key={categoria.CategoriesID}
-              onPress={() =>
-                setCategoriaSeleccionada(
-                  categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
-                )
-              }
-              style={[
-                styles.categoriaItem,
-                categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
-              ]}
-            >
-              <Text
-                style={
-                  categoriaSeleccionada === categoria.CategoriesID
-                    ? styles.categoriaTextSeleccionada
-                    : styles.categoriaText
-                }
-              >
-                {categoria.Name_categories}
-              </Text>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <Text style={styles.noResults}>No se encontró nada....</Text>
-        )}
-      </View>
-
-      {/* Productos */}
-      {categoriaSeleccionada && (
-        <View style={styles.productosContainer}>
-          <Text style={styles.sectionTitle}>
-            Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
-          </Text>
-          {categorias
-            .find(c => c.CategoriesID === categoriaSeleccionada)
-            ?.products.map((p: Producto) => (
-              <View key={p.ProductsID} style={styles.productoItem}>
-                <Image
-                  source={
-                    p.imageUri
-                      ? { uri: p.imageUri.startsWith('http') ? p.imageUri : `${API}${p.imageUri.startsWith('/') ? '' : '/'}${p.imageUri}` }
-                      : require('../../../assets/images/noimg.png')
-                  }
-                  style={styles.productoImage}
-                />
-                <View style={styles.productoInfo}>
-                  <Text style={styles.productoNombre}>{p.Name_product}</Text>
-                  <Text style={styles.productoDescripcion}>{p.Description}</Text>
-                  <Text style={styles.productoCantidad}>Cantidad: {p.Amount}</Text>
-                  <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
-                </View>
-                <View style={styles.productoIcons}>
-                  <TouchableOpacity onPress={() => confirmarEliminarProducto(p.ProductsID)}>
-                    <Image source={require('../../../assets/images/eliminar.png')} style={styles.iconoProducto} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => editarProducto(p)}>
-                    <Image source={require('../../../assets/images/editar.png')} style={styles.iconoProducto} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-        </View>
-      )}
-    </ScrollView>
-
-    {/* Confirmación de eliminación */}
-    {showDeleteConfirm && (
-      <View style={styles.overlay}>
-        <View style={styles.confirmBox}>
-          <Image source={require('../../../assets/images/eliminar.png')} style={{ width: 50, height: 50, alignSelf: 'center' }} />
-          <Text style={{ fontSize: 16, textAlign: 'center', marginVertical: 10 }}>
-            ¿Estás seguro que deseas eliminar este producto?
-          </Text>
-          <TouchableOpacity
-            style={styles.confirmButton}
-            onPress={eliminarProducto}
-          >
-            <Text style={{ color: '#fff', textAlign: 'center' }}>Eliminar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.confirmButton, { backgroundColor: '#ccc', marginTop: 5 }]}
-            onPress={() => setShowDeleteConfirm(false)}
-          >
-            <Text style={{ textAlign: 'center' }}>Cancelar</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    )}
-
-    {/* ALERTA DE ÉXITO */}
-    {showSuccess && (
-      <View style={styles.successOverlay}>
-        <View style={styles.successBox}>
-          <LottieView
-            source={require('../../../assets/fonts/delete.json')}
-            autoPlay
-            loop={false}
-            style={{
-              width: 250,
-              height: 250,
-              marginBottom: 20,
-              borderRadius: 75,
-              borderWidth: 3,
-              borderColor: '#6200EE',
-              alignSelf: 'center',
-            }}
-          />
-          <Text style={styles.successText}>Producto eliminado con éxito!</Text>
-          <TouchableOpacity onPress={() => setShowSuccess(false)} style={styles.successButton}>
-            <Text style={{ color: '#fff', fontWeight: 'bold' }}>OK</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    )}
-  </>
-);
+   <>
+     <ScrollView
+       style={styles.container}
+       refreshControl={
+         <RefreshControl
+           refreshing={refreshing}
+           onRefresh={onRefresh}
+         />
+       }
+     >
+       {/* Formulario */}
+       <View style={styles.form}>
+         <Text style={styles.label}>Nombre</Text>
+         <TextInput style={styles.input} value={nombre} onChangeText={setNombre} />
+ 
+         <Text style={styles.label}>Precio</Text>
+         <TextInput style={styles.input} value={precio} onChangeText={setPrecio} keyboardType="numeric" />
+ 
+         <Text style={styles.label}>Descripción</Text>
+         <TextInput style={styles.input} value={descripcion} onChangeText={setDescripcion} />
+ 
+         <Text style={styles.label}>Cantidad</Text>
+         <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="numeric" />
+ 
+         <Text style={styles.label}>Categoría</Text>
+         <Picker
+           selectedValue={categoryID}
+           onValueChange={(val) => setCategoryID(val)}
+           style={styles.picker}
+         >
+           <Picker.Item label="Selecciona categoría" value="" />
+           {categorias.map(c => (
+             <Picker.Item key={c.CategoriesID} label={c.Name_categories} value={c.CategoriesID.toString()} />
+           ))}
+         </Picker>
+ 
+                <TextInput
+                             placeholder="agregar nueva categoría"
+                             style={styles.input}
+                             value={newCategory}
+                             onChangeText={setNewCategory}
+                           />
+ 
+         <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+           <Text style={styles.imageButtonText}>{imageUri ? 'Cambiar imagen' : 'Seleccionar imagen'}</Text>
+         </TouchableOpacity>
+         {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
+ 
+         <TouchableOpacity style={styles.saveButton} onPress={guardarProducto}>
+           <Text style={styles.saveButtonText}>{editId ? 'Actualizar Producto' : 'Crear Producto'}</Text>
+         </TouchableOpacity>
+ 
+         {editId && (
+           <TouchableOpacity style={styles.cancelButton} onPress={resetForm}>
+             <Text style={styles.cancelButtonText}>Cancelar</Text>
+           </TouchableOpacity>
+         )}
+ 
+         {errorMsg && (
+           <Animatable.View animation="shake" style={styles.errorBox}>
+             <Text style={styles.errorText}>{errorMsg}</Text>
+             <View style={styles.errorIcon}>
+               <Text style={styles.errorIconText}>!</Text>
+             </View>
+           </Animatable.View>
+         )}
+       </View>
+ 
+       {/* Lista de categorías */}
+       <View style={styles.categoriasContainer}>
+         {categorias.length > 0 ? (
+           categorias.map((categoria) => (
+             <TouchableOpacity
+               key={categoria.CategoriesID}
+               onPress={() =>
+                 setCategoriaSeleccionada(
+                   categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
+                 )
+               }
+               style={[
+                 styles.categoriaItem,
+                 categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
+               ]}
+             >
+               <Text
+                 style={
+                   categoriaSeleccionada === categoria.CategoriesID
+                     ? styles.categoriaTextSeleccionada
+                     : styles.categoriaText
+                 }
+               >
+                 {categoria.Name_categories}
+               </Text>
+             </TouchableOpacity>
+           ))
+         ) : (
+           <Text style={styles.noResults}>No se encontró nada....</Text>
+         )}
+       </View>
+ 
+       {/* Productos */}
+       {categoriaSeleccionada && (
+         <View style={styles.productosContainer}>
+           <Text style={styles.sectionTitle}>
+             Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
+           </Text>
+           {categorias
+             .find(c => c.CategoriesID === categoriaSeleccionada)
+             ?.products.map((p: Producto) => (
+               <View key={p.ProductsID} style={styles.productoItem}>
+                 <Image
+                   source={
+                     p.imageUri
+                       ? { uri: p.imageUri.startsWith('http') ? p.imageUri : `${API}${p.imageUri.startsWith('/') ? '' : '/'}${p.imageUri}` }
+                       : require('../../../assets/images/noimg.png')
+                   }
+                   style={styles.productoImage}
+                 />
+                 <View style={styles.productoInfo}>
+                   <Text style={styles.productoNombre}>{p.Name_product}</Text>
+                   <Text style={styles.productoDescripcion}>{p.Description}</Text>
+                   <Text style={styles.productoCantidad}>Cantidad: {p.Amount}</Text>
+                   <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
+                 </View>
+                 <View style={styles.productoIcons}>
+                   <TouchableOpacity onPress={() => confirmarEliminarProducto(p.ProductsID)}>
+                     <Image source={require('../../../assets/images/eliminar.png')} style={styles.iconoProducto} />
+                   </TouchableOpacity>
+                   <TouchableOpacity onPress={() => editarProducto(p)}>
+                     <Image source={require('../../../assets/images/editar.png')} style={styles.iconoProducto} />
+                   </TouchableOpacity>
+                 </View>
+               </View>
+             ))}
+         </View>
+       )}
+     </ScrollView>
+ 
+     {/* Confirmación de eliminación */}
+     {showDeleteConfirm && (
+       <View style={styles.overlay}>
+         <View style={styles.confirmBox}>
+           <Image source={require('../../../assets/images/eliminar.png')} style={{ width: 50, height: 50, alignSelf: 'center' }} />
+           <Text style={{ fontSize: 16, textAlign: 'center', marginVertical: 10 }}>
+             ¿Estás seguro que deseas eliminar este producto?
+           </Text>
+           <TouchableOpacity
+             style={styles.confirmButton}
+             onPress={eliminarProducto}
+           >
+             <Text style={{ color: '#fff', textAlign: 'center' }}>Eliminar</Text>
+           </TouchableOpacity>
+           <TouchableOpacity
+             style={[styles.confirmButton, { backgroundColor: '#ccc', marginTop: 5 }]}
+             onPress={() => setShowDeleteConfirm(false)}
+           >
+             <Text style={{ textAlign: 'center' }}>Cancelar</Text>
+           </TouchableOpacity>
+         </View>
+       </View>
+     )}
+ 
+     {/* ALERTA DE ÉXITO */}
+     {showSuccess && (
+       <View style={styles.successOverlay}>
+         <View style={styles.successBox}>
+           <LottieView
+             source={require('../../../assets/fonts/delete.json')}
+             autoPlay
+             loop={false}
+             style={{
+               width: 250,
+               height: 250,
+               marginBottom: 20,
+               borderRadius: 75,
+               borderWidth: 3,
+               borderColor: '#6200EE',
+               alignSelf: 'center',
+             }}
+           />
+           <Text style={styles.successText}>Producto eliminado con éxito!</Text>
+           <TouchableOpacity onPress={() => setShowSuccess(false)} style={styles.successButton}>
+             <Text style={{ color: '#fff', fontWeight: 'bold' }}>OK</Text>
+           </TouchableOpacity>
+         </View>
+       </View>
+     )}
+   </>
+ );
 
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 0, backgroundColor: '#f9f9f9' },
-  navbar: { flexDirection: 'row', alignItems: 'center', marginBottom: 15,backgroundColor:'#a90de7ff',padding:30},
-  backButton: { justifyContent: 'center', alignItems: 'center' },
-  backText: { fontSize: 22, color: '#ffffffff' },
-  navTitle: { flex: 1, textAlign: 'center', fontSize: 30, fontWeight: 'bold', color: '#ffffffff' },
+  
   form: { backgroundColor: '#fff', padding: 15, borderRadius: 10, elevation: 2 },
   label: { fontSize: 14, fontWeight: 'bold', marginTop: 10 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginTop: 5 },

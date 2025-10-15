@@ -17,21 +17,18 @@ export default function AdminTabsLayout() {
         tabBarIcon: ({ color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
 
-          if (route.name === "AdminHome") iconName = "home";
-          else if (route.name === "NewProducts") iconName = "cube";
+          if (route.name === "NewProducts") iconName = "home";
           else if (route.name === "NewUsers") iconName = "people";
           else if (route.name === "Company") iconName = "business";
           else if (route.name === "EarNings") iconName = "cash";
+          else if (route.name === "UserConA") iconName = "person";
           else iconName = "ellipse";
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}
     >
-      <Tabs.Screen
-        name="AdminHome"
-        options={{ title: "Inicio" }}
-      />
+      
       
       <Tabs.Screen
         name="NewProducts"
@@ -48,6 +45,10 @@ export default function AdminTabsLayout() {
       <Tabs.Screen
         name="Earnings"
         options={{ title: "Ganancias" }}
+      />
+      <Tabs.Screen
+        name="UserConA"
+        options={{ title: "Usuario" }}
       />
     </Tabs>
   );
