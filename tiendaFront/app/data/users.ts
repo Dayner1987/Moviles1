@@ -1,3 +1,4 @@
+//app/data/users.ts
 import { Rol } from './roles';
 
 export type Usuario = {

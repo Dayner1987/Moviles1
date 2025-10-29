@@ -1,207 +1,238 @@
+// app/(tabs)/operations/Search.tsx
+import { Producto } from "@/app/data/products";
+import { Usuario } from "@/app/data/users";
+import { API } from "@/app/ip/IpDirection";
+import LottieView from "lottie-react-native";
 import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
   ActivityIndicator,
-  TextInput,
   ScrollView,
-  FlatList,
-  TouchableOpacity,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import { API } from "@/app/ip/IpDirection";
-import { Usuario } from "@/app/data/users";
 
-export default function Search() {
+export default function SearchDashboard() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [queryUser, setQueryUser] = useState("");
+
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [queryProduct, setQueryProduct] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchUsers = async () => {
       try {
         const res = await fetch(`${API}/users`);
         const data = await res.json();
         setUsuarios(data);
       } catch (error) {
-        console.error("Error al cargar usuarios:", error);
+        console.error(error);
       } finally {
-        setLoading(false);
+        setLoadingUsers(false);
       }
     };
-    fetchData();
+    fetchUsers();
+
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch(`${API}/products`);
+        const data = await res.json();
+        setProductos(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+    fetchProducts();
   }, []);
 
-  const filteredUsuarios = usuarios.filter((u) =>
-    u.Name1.toLowerCase().includes(query.toLowerCase())
+  // Filtrado
+  const filteredUsers = usuarios.filter(
+    (u) =>
+      u.Name1.toLowerCase().includes(queryUser.toLowerCase()) ||
+      u.LastName1.toLowerCase().includes(queryUser.toLowerCase()) ||
+      String(u.CI).includes(queryUser.trim())
   );
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FF4500" />
-        <Text style={styles.loadingText}>Cargando usuarios...</Text>
-      </View>
-    );
-  }
+  const filteredProducts = productos.filter((p) =>
+    p.Name_product.toLowerCase().includes(queryProduct.toLowerCase())
+  );
 
   return (
-    <View style={styles.container}>
-      {/* Navbar */}
-      <LinearGradient
-        colors={["#FF8C00", "#FF4500"]}
-        start={[0, 0]}
-        end={[1, 0]}
-        style={styles.navbar}
-      >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <View style={styles.backCircle}>
-            <Text style={styles.backText}>←</Text>
-          </View>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>Usuarios</Text>
-      </LinearGradient>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 20 }}>
+      {/* Lottie central */}
+      <View style={styles.lottieContainer}>
+        <LottieView
+          source={require("../../../assets/fonts/Profile.json")}
+          autoPlay
+          loop
+          style={{ width: 250, height: 250 }}
+        />
+        <Text style={{ color: "#666", fontStyle: "italic" }}>
+        </Text>
+      </View>
 
-      {/* Buscador */}
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Buscar por nombre..."
-        placeholderTextColor="#999"
-        value={query}
-        onChangeText={setQuery}
-      />
+      {/* ===== Usuarios ===== */}
+      <View style={[styles.card, { backgroundColor: "#f3e5f5" }]}>
+        <Text style={styles.cardTitle}>Usuarios</Text>
+        <TextInput
+          style={[styles.searchInput, { borderColor: "#646464ff" }]}
+          placeholder="Buscar usuario por nombre, apellido o CI..."
+          placeholderTextColor="#706c6cff"
+          value={queryUser}
+          onChangeText={setQueryUser}
+        />
 
-      {/* Tabla con scroll horizontal */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View>
-          {/* Encabezado */}
-          <View style={styles.tableHeader}>
-            <Text style={[styles.headerCell, { flex: 1.8 }]}>CI</Text>
-            <Text style={[styles.headerCell, { flex: 2.2 }]}>Nombre</Text>
-            <Text style={[styles.headerCell, { flex: 2.2 }]}>Apellido</Text>
-            <Text style={[styles.headerCell, { flex: 3 }]} numberOfLines={1}>
-              Email
-            </Text>
-          </View>
-
-          {/* Filas */}
-          <FlatList
-            data={filteredUsuarios}
-            keyExtractor={(item) => item.clientID.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.tableRow}>
-                <Text style={[styles.tableCell, { flex: 1.8 }]}>{item.CI}</Text>
-                <Text style={[styles.tableCell, { flex: 2.2 }]}>{item.Name1}</Text>
-                <Text style={[styles.tableCell, { flex: 2.2 }]}>{item.LastName1}</Text>
-                <Text style={[styles.tableCell, { flex: 3 }]} numberOfLines={1}>
-                  {item.Email}
-                </Text>
-              </View>
-            )}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>No se encontraron usuarios.</Text>
-            }
-          />
+        {/* Encabezado */}
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <Text style={[styles.col, { flex: 2 }]}>Carnet    </Text>
+          <Text style={[styles.col, { flex: 3 }]}>  Nombre</Text>
+          <Text style={[styles.col, { flex: 3 }]}>Apellido</Text>
+          <Text style={[styles.col, { flex: 5 }]}>Email</Text>
         </View>
-      </ScrollView>
-    </View>
+
+        {loadingUsers ? (
+          <ActivityIndicator size="large" color="#9c27b0" style={{ margin: 10 }} />
+        ) : filteredUsers.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <LottieView
+              source={require("../../../assets/fonts/Error404.json")}
+              autoPlay
+              loop
+              style={{ width: 120, height: 120 }}
+            />
+            <Text style={styles.emptyText}>No se encontraron usuarios</Text>
+          </View>
+        ) : (
+          <ScrollView style={{ maxHeight: 300 }}>
+            {filteredUsers.map((u) => (
+              <View key={u.clientID} style={styles.tableRow}>
+              <Text style={[styles.col, { flex: 3 }]}>{u.CI}</Text>
+<Text style={[styles.col, { flex: 3 }]}>{u.Name1}</Text>
+<Text style={[styles.col, { flex: 3 }]}>{u.LastName1}</Text>
+<Text style={[styles.col, { flex: 5 }]}>{u.Email}</Text>
+
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      {/* ===== Productos ===== */}
+      <View style={[styles.card, { backgroundColor: "#e1bee7" }]}>
+        <Text style={styles.cardTitle}>Productos</Text>
+        <TextInput
+          style={[styles.searchInput, { borderColor: "#6b6b6bff" }]}
+          placeholder="Buscar producto por nombre..."
+          placeholderTextColor="#818081ff"
+          value={queryProduct}
+          onChangeText={setQueryProduct}
+        />
+
+        {/* Encabezado */}
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <Text style={[styles.col, { flex: 3 }]}>Nombre</Text>
+          <Text style={[styles.col, { flex: 2 }]}>Precio</Text>
+          <Text style={[styles.col, { flex: 4 }]}>Categoría</Text>
+          <Text style={[styles.col, { flex: 2 }]}>Cantidad</Text>
+        </View>
+
+        {loadingProducts ? (
+          <ActivityIndicator size="large" color="#7b1fa2" style={{ margin: 10 }} />
+        ) : filteredProducts.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <LottieView
+              source={require("../../../assets/fonts/505Error.json")}
+              autoPlay
+              loop
+              style={{ width: 120, height: 120 }}
+            />
+            <Text style={styles.emptyText}>No se encontraron productos</Text>
+          </View>
+        ) : (
+          <ScrollView style={{ maxHeight: 300 }}>
+            {filteredProducts.map((p) => (
+              <View key={p.ProductsID} style={styles.tableRow}>
+                <Text style={[styles.col, { flex: 3 }]}>{p.Name_product}</Text>
+                <Text style={[styles.col, { flex: 2 }]}>{p.Price} Bs</Text>
+                <Text style={[styles.col, { flex: 4 }]}>{p.categories?.Name_categories || "-"}</Text>
+                <Text style={[styles.col, { flex: 2 }]}>{p.Amount}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    padding: 10,
-  },
-  navbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+  container: { flex: 1, padding: 10, backgroundColor: "#fff" },
+  lottieContainer: { alignItems: "center", marginBottom: 15 },
+
+  card: {
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 18,
     elevation: 3,
   },
-  backButton: {
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  backCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 3,
-  },
-  backText: {
+
+  cardTitle: {
     fontSize: 18,
-    color: "#FF4500",
+    fontWeight: "bold",
+    marginBottom: 8,
+    color: "#4a148c",
   },
-  navTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#fff",
-  },
+
   searchInput: {
     borderWidth: 1,
-    borderColor: "#ddd",
     borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    fontSize: 16,
-    backgroundColor: "#f9f9f9",
-    marginBottom: 12,
-  },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#FF8C00",
-    paddingVertical: 14,
+    paddingVertical: 15,
     paddingHorizontal: 12,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
+    fontSize: 16,
+    backgroundColor: "#fff",
+    marginBottom: 10,
   },
-  headerCell: {
-    fontWeight: "bold",
-    color: "#fff",
-    fontSize: 15,
-    textAlign: "left",
-  },
+
   tableRow: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    paddingVertical: 16, // más espacio vertical
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  tableCell: {
-    fontSize: 15,
-    color: "#333",
-    textAlign: "left",
-    paddingRight: 14,
-  },
-  emptyText: {
-    textAlign: "center",
-    padding: 20,
-    fontSize: 16,
-    color: "#999",
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
+    borderBottomColor: "#ddd",
     alignItems: "center",
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#444",
+
+  tableHeader: {
+    backgroundColor: "#cc87e7ff", // violeta claro
+    borderBottomWidth: 2,
+    borderBottomColor: "#c007e0ff", // violeta oscuro
+  },
+
+  col: {
+    fontSize: 15,
+    color: "#333",
+    flexShrink: 1, // evita que se rompa el texto
+  },
+
+  emptyContainer: {
+    alignItems: "center",
+    marginVertical: 10,
+  },
+
+  emptyText: {
+    color: "#999",
+    fontSize: 15,
+  },
+
+  // Scroll para la tabla
+  tableScroll: {
+    maxHeight: 300, // ajusta la altura visible
+    borderRadius: 8,
+    backgroundColor: "#ffffffff", // ligero violeta para diferenciar filas
   },
 });

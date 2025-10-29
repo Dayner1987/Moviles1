@@ -1,3 +1,4 @@
+//app/data/products.ts
 export type Producto = {
   ProductsID: number;
   Name_product: string;

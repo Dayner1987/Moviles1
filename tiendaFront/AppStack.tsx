@@ -6,12 +6,10 @@ import React from 'react';
 import Home from './app/(tabs)/others/Home';
 import Login from './app/(tabs)/login';
 import Register from './app/(tabs)/register';
-import AdminHome from './app/(tabs)/opAdmin/UserConA';
 import EmployeeHome from './app/(tabs)/operations/EmployeeHome';
 import { TabsStackParamList } from './app/(tabs)/types';
 
 // operaciones
-import UserConE from './app/(tabs)/operations/UserConE';
 import Orders from './app/(tabs)/operations/Orders';
 import Search from './app/(tabs)/operations/Search';
 import OrderStatus from './app/(tabs)/operations/OrderStatus';
@@ -52,18 +50,9 @@ export default function AppStack() {
         component={EmployeeHome}
         options={{ title: "Panel Empleado" }}
       />
-      <Stack.Screen
-        name="AdminHome"
-        component={AdminHome}
-        options={{ title: "Panel Administrador" }}
-      />
-
+     
       {/* operaciones */}
-      <Stack.Screen
-        name="UserConE"
-        component={UserConE}
-        options={{ title: "Agregar Productos" }}
-      />
+      
       <Stack.Screen
         name="Orders"
         component={Orders}

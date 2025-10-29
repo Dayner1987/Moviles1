@@ -69,40 +69,29 @@ const flatListRef = useRef<FlatList>(null);
   };
 
 const guardarUsuario = async () => {
-  // 1️⃣ Validar campos obligatorios
-  if (!name1 || !lastName1 || !ci || !email || !address || !password || !roleID) {
+  if (!name1 || !lastName1 || !ci || !email || !address || !roleID) {
     setErrorMsg('Complete todos los campos!!!');
     return;
   }
 
-  // 2️⃣ Validar CI como número válido (6 a 10 dígitos)
   if (!/^\d{6,10}$/.test(ci)) {
-    setErrorMsg('CI entre 7 a 10 digitos!');
+    setErrorMsg('CI entre 6 a 10 digitos!');
     return;
   }
 
-  // 3️⃣ Validar email más estrictamente
   const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
   if (!emailRegex.test(email)) {
     setErrorMsg('Ingrese un Email Valido!');
     return;
   }
 
-  // 4️⃣ Validar contraseña mínima con al menos una letra y un número
-  const passRegex = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
-  if (!passRegex.test(password)) {
-    setErrorMsg('contraseña minimo 6 caracteres !!');
+  // Validar contraseña solo si hay algo escrito
+  if (password && !/^(?=.*[A-Za-z])(?=.*\d).{6,}$/.test(password)) {
+    setErrorMsg('Contraseña minimo 6 caracteres con letras y números!');
     return;
   }
 
-  // 5️⃣ Validar que rol sea 1 o 2
-  if (!(roleID === '1' || roleID === '2')) {
-    setErrorMsg('Seleccione rol valido');
-    return;
-  }
-
-  // 6️⃣ Crear objeto usuario
-  const userData = {
+  const userData: any = {
     Name1: name1,
     Name2: name2 || undefined,
     LastName1: lastName1,
@@ -110,12 +99,15 @@ const guardarUsuario = async () => {
     CI: parseInt(ci),
     Email: email,
     Address: address,
-    Password: password,
     Roles_RolesID: parseInt(roleID),
   };
 
+  // Agregar contraseña solo si se ingresó
+  if (password) {
+    userData.Password = password;
+  }
+
   try {
-    // 7️⃣ Determinar método y URL según si es actualización o creación
     const method = editUserId !== null ? 'PUT' : 'POST';
     const url = editUserId !== null ? `${API}/users/${editUserId}` : `${API}/users`;
 
@@ -132,25 +124,19 @@ const guardarUsuario = async () => {
 
     const data = await res.json();
 
-    // 8️⃣ Actualizar lista de usuarios localmente
-   
+    if (editUserId !== null) {
+      setUsuarios(usuarios.map(u => (u.clientID === editUserId ? data : u)));
+    } else {
+      setUsuarios([...usuarios, data]);
+    }
 
-if (editUserId !== null) {
-  // Actualiza usuario existente en la lista local
-  setUsuarios(usuarios.map(u => (u.clientID === editUserId ? data : u)));
-} else {
-  // Agrega nuevo usuario
-  setUsuarios([...usuarios, data]); // NOTA: no data.user, porque tu backend ya devuelve el usuario completo
-}
-
-
-    // 9️⃣ Mostrar éxito y resetear formulario
     setShowSuccess(true);
     resetUsuarioForm();
   } catch (err: any) {
     ToastAndroid.show(err.message, ToastAndroid.SHORT);
   }
 };
+
 
 
 const editarUsuario = (u: Usuario) => {

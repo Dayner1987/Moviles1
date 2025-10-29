@@ -1,6 +1,7 @@
-// app/(tabs)/PayClient.tsx
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import LottieView from "lottie-react-native";
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
@@ -9,20 +10,54 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+import { jwtDecode } from "jwt-decode";
 import { useCarrito } from "../../../hooks/UseCarrito";
-import { useStatus } from "../../../hooks/UseStatus";
 import { CategoriaConProductos } from "../../data/categories";
 import { API } from "../../ip/IpDirection";
+import { JwtPayload } from "../../data/jwtPayload";
 
 export default function PayClient() {
-  const { user, loading: loadingUser } = useStatus();
   const [categorias, setCategorias] = useState<CategoriaConProductos[]>([]);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isCliente, setIsCliente] = useState(false);
 
-  const { carrito, agregarAlCarrito, eliminarDelCarrito, limpiarCarrito } = useCarrito();
+  const { carrito, agregarAlCarrito, eliminarDelCarrito } = useCarrito();
 
+  // 🔹 Cargar token y verificar si es cliente
+  useEffect(() => {
+    const verificarToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          setIsCliente(false);
+          setLoading(false);
+          return;
+        }
+
+        const decoded = jwtDecode<JwtPayload>(token);
+        console.log("Token decodificado en PayClient:", decoded);
+
+        if (decoded.role?.toLowerCase() === "cliente") {
+          setIsCliente(true);
+          await fetchCategorias();
+        } else {
+          setIsCliente(false);
+        }
+      } catch (e) {
+        console.error("Error al verificar token:", e);
+        setIsCliente(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verificarToken();
+  }, []);
+
+  // 🔹 Obtener categorías y productos
   const fetchCategorias = async () => {
     try {
       const res = await fetch(`${API}/categories`);
@@ -50,21 +85,23 @@ export default function PayClient() {
     }
   };
 
-  useEffect(() => {
-    fetchCategorias();
-  }, []);
-
-  if (loadingUser) {
+  if (loading) {
     return (
       <View style={styles.container}>
-        <Text>Cargando...</Text>
+        <Text>Cargando productos...</Text>
       </View>
     );
   }
 
-  if (!user || user.role !== "Cliente") {
+  if (!isCliente) {
     return (
       <View style={styles.container}>
+        <LottieView
+          source={require("../../../assets/fonts/Error404.json")}
+          autoPlay
+          loop
+          style={styles.lottie}
+        />
         <Text style={styles.textoAviso}>
           Debes iniciar sesión como cliente para ver los productos y comprar.
         </Text>
@@ -189,8 +226,6 @@ export default function PayClient() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 15, backgroundColor: "#fff" },
-
-  // Categorías
   categoriaItem: {
     padding: 10,
     borderRadius: 8,
@@ -201,8 +236,6 @@ const styles = StyleSheet.create({
   categoriaSeleccionada: { backgroundColor: "#6200EE" },
   categoriaText: { color: "#000", fontWeight: "500" },
   categoriaTextSeleccionada: { color: "#fff", fontWeight: "600" },
-
-  // Productos
   productoItem: {
     flexDirection: "row",
     padding: 10,
@@ -217,20 +250,8 @@ const styles = StyleSheet.create({
   productoNombre: { fontWeight: "700", fontSize: 16, color: "#333" },
   productoDescripcion: { fontStyle: "italic", color: "#666", fontSize: 13 },
   productoPrecio: { fontWeight: "700", color: "#6200EE", marginTop: 4 },
-
-  // Carrito
-  carritoContainer: {
-    marginTop: 15,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderColor: "#ccc",
-  },
-  sectionTitle: {
-    fontWeight: "700",
-    fontSize: 18,
-    marginBottom: 10,
-    color: "#333",
-  },
+  carritoContainer: { marginTop: 15, paddingTop: 10, borderTopWidth: 1, borderColor: "#ccc" },
+  sectionTitle: { fontWeight: "700", fontSize: 18, marginBottom: 10, color: "#333" },
   carritoItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -244,14 +265,7 @@ const styles = StyleSheet.create({
   carritoInfo: { flex: 1 },
   carritoNombre: { fontSize: 15, fontWeight: "600", color: "#222" },
   carritoPrecio: { color: "#6200EE", fontWeight: "bold" },
-  carritoVacio: {
-    textAlign: "center",
-    marginTop: 20,
-    fontStyle: "italic",
-    color: "#666",
-  },
-
-  // Total y botones
+  carritoVacio: { textAlign: "center", marginTop: 20, fontStyle: "italic", color: "#666" },
   totalContainer: { marginTop: 10, marginBottom: 5, alignItems: "flex-end" },
   totalText: { fontSize: 17, fontWeight: "bold", color: "#000" },
   buttonPagar: {
@@ -265,4 +279,12 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: "#fff", fontWeight: "bold", marginLeft: 6 },
   textoAviso: { fontSize: 18, textAlign: "center", marginTop: 50 },
+  lottie: {
+    width: 320,
+    height: 200,
+    marginTop: 150,
+    marginBottom: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });

@@ -18,8 +18,8 @@ import * as Animatable from 'react-native-animatable';
 import { CategoriaConProductos } from '../../data/categories';
 import { Producto } from '../../data/products';
 import { API } from '../../ip/IpDirection';
-
-export default function NewProducts() {
+import { router } from 'expo-router';
+export default function EmployeeHome() {
   // Estado y referencias
 const [refreshing, setRefreshing] = useState(false);
 const [nombre, setNombre] = useState('');
@@ -45,12 +45,30 @@ const [tempCategory, setTempCategory] = useState<number | null>(categoryID ? par
 
 const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 const [savedProduct, setSavedProduct] = useState<Producto | null>(null);
+
+// ----------------------
+// Editar producto: llena formulario y hace scroll al top
+const editarProducto = (p: Producto) => {
+  setNombre(p.Name_product);
+  setPrecio(p.Price.toString());
+  setDescripcion(p.Description || '');
+  setAmount(p.Amount.toString());
+  setCategoryID(p.CategoryID.toString());
+  setSelectedCategory(p.CategoryID); // ✅ mantiene su categoría real
+  setImageUri(p.imageUri ?? '');
+  setEditId(p.ProductsID);
+
+  setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
+};
+
 // ----------------------
 // Guardar o actualizar producto
 const guardarProducto = async () => {
-  // Validaciones iniciales
   const categoriaValida =
-    selectedCategory || (categoryID && categoryID !== '') || (newCategory && newCategory.trim() !== '');
+    selectedCategory ||
+    (categoryID && categoryID !== '') ||
+    (newCategory && newCategory.trim() !== '');
+
   if (!nombre.trim() || !precio.trim() || !amount.trim() || !categoriaValida) {
     setErrorMsg('Completa todos los campos');
     return;
@@ -66,7 +84,6 @@ const guardarProducto = async () => {
   try {
     let categoryToUse = selectedCategory?.toString() || categoryID;
 
-    // Crear nueva categoría si se ingresó
     if (newCategory && newCategory.trim() !== '') {
       const resCat = await fetch(`${API}/categories`, {
         method: 'POST',
@@ -75,12 +92,11 @@ const guardarProducto = async () => {
       });
 
       if (!resCat.ok) throw new Error('Error al crear nueva categoría');
-
       const newCatData = await resCat.json();
 
-      // Actualizamos la lista de categorías en el front
-      setCategorias([...categorias, { ...newCatData, products: [] }]);
+      setCategorias((prev) => [...prev, { ...newCatData, products: [] }]);
       categoryToUse = newCatData.CategoriesID.toString();
+      setSelectedCategory(newCatData.CategoriesID);
       setNewCategory('');
     }
 
@@ -90,7 +106,6 @@ const guardarProducto = async () => {
       return;
     }
 
-    // Creamos FormData para enviar el producto
     const formData = new FormData();
     formData.append('Name_product', nombre.trim());
     formData.append('Price', precioNum.toString());
@@ -98,13 +113,11 @@ const guardarProducto = async () => {
     formData.append('Amount', amountNum.toString());
     formData.append('CategoryID', categoryIdNum.toString());
 
-    // Adjuntar imagen si existe
     if (imageUri) {
       const filename = imageUri.split('/').pop()!;
       const match = /\.(\w+)$/.exec(filename);
       const ext = match ? match[1] : 'jpg';
       const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-
       formData.append('image', {
         uri: imageUri.startsWith('file://') ? imageUri : 'file://' + imageUri,
         name: filename,
@@ -112,61 +125,69 @@ const guardarProducto = async () => {
       } as any);
     }
 
-    // Definir método y URL según sea creación o actualización
     const method = editId ? 'PUT' : 'POST';
     const url = editId ? `${API}/products/${editId}` : `${API}/products`;
-
-    const response = await fetch(url, {
-      method,
-      body: formData,
-      headers: {
-        Accept: 'application/json',
-        // No incluir Content-Type porque FormData lo maneja automáticamente
-      },
-    });
-
+    const response = await fetch(url, { method, body: formData, headers: { Accept: 'application/json' } });
     if (!response.ok) throw new Error('Error al guardar el producto');
-
     const data = await response.json();
 
-    // Actualizamos lista de productos según sea edición o creación
-    if (editId) {
-      setProductos(productos.map(p => (p.ProductsID === editId ? data : p)));
-    } else {
-      setProductos([...productos, data]);
+    // ✅ Actualizar productos globales
+    setProductos((prev) =>
+      editId
+        ? prev.map((p) => (p.ProductsID === editId ? data : p))
+        : [...prev, data]
+    );
+
+   setCategorias((prev) => {
+  let updated = prev.map((cat) => {
+    if (cat.CategoriesID === data.CategoryID) {
+      const productsUpdated = editId
+        ? cat.products.map((p) =>
+            p.ProductsID === data.ProductsID ? data : p
+          )
+        : [...cat.products, data];
+      return { ...cat, products: productsUpdated };
+    }
+    return cat;
+  });
+
+  // Si la categoría no existía, la agregamos
+  if (!updated.some((cat) => cat.CategoriesID === data.CategoryID)) {
+    updated = [
+      ...updated,
+      {
+        CategoriesID: data.CategoryID,
+        Name_categories: data.Category?.Name_categories || newCategory.trim(),
+        products: [data],
+      },
+    ];
+  }
+
+  return [...updated]; // 🔁 fuerza re-render
+});
+
+
+    // ✅ Si estás viendo esa categoría, refresca la vista al instante
+    if (categoriaSeleccionada === data.CategoryID) {
+      setCategoriaSeleccionada(null);
+      setTimeout(() => setCategoriaSeleccionada(data.CategoryID), 100);
     }
 
-    // Guardamos el producto para mostrar en overlay
     setSavedProduct(data);
     setShowSaveSuccess(true);
-
-    // Limpiamos formulario y scroll al inicio
     resetForm();
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
-
     setErrorMsg('');
+
+    console.log('✅ Producto guardado/actualizado correctamente:', data);
   } catch (error) {
-    console.error('Error guardarProducto:', error);
+    console.error('❌ Error guardarProducto:', error);
     setErrorMsg('No se pudo guardar el producto');
   }
 };
 
 
-
-// ----------------------
-// Editar producto: llena formulario y hace scroll al top
-const editarProducto = (p: Producto) => {
-  setNombre(p.Name_product);
-  setPrecio(p.Price.toString());
-  setDescripcion(p.Description || '');
-  setAmount(p.Amount.toString());
-  setCategoryID(p.CategoryID.toString());
-  setSelectedCategory(p.CategoryID); // <--- importante
-  setImageUri(p.imageUri || '');
-  setEditId(p.ProductsID);
-
-  setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
-};
+// ---------------------
 
 
 // ----------------------
@@ -192,6 +213,13 @@ const eliminarProducto = async () => {
     console.error(error);
     setShowDeleteConfirm(false);
   }
+  setCategorias((prev) =>
+    prev.map((cat) => ({
+      ...cat,
+      products: cat.products.filter((p) => p.ProductsID !== productoAEliminar),
+    }))
+  );
+  
 };
 
 // ----------------------
@@ -273,6 +301,7 @@ const resetForm = () => {
   setEditId(null);
 };
 
+
  return (
   <>
     <ScrollView
@@ -285,6 +314,7 @@ const resetForm = () => {
         />
       }
     >
+      <View style={styles.container2}>
       {/* Formulario */}
       <View style={styles.form}>
         <Text style={styles.label}>Nombre</Text>
@@ -375,8 +405,9 @@ const resetForm = () => {
           </Animatable.View>
         )}
       </View>
-
+</View>
       {/* Lista de categorías */}
+      <View style={styles.container2}>
       <View style={styles.categoriasContainer}>
         {categorias.length > 0 ? (
           categorias.map((categoria) => (
@@ -407,10 +438,10 @@ const resetForm = () => {
           <Text style={styles.noResults}>No se encontró nada....</Text>
         )}
       </View>
-
+</View>
       {/* Productos */}
       {categoriaSeleccionada && (
-        <View style={styles.productosContainer}>
+        <View style={styles.productosContainer&&styles.container2}>
           <Text style={styles.sectionTitle}>
             Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
           </Text>
@@ -533,14 +564,14 @@ const resetForm = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 0, backgroundColor: '#f9f9f9' },
-  
+    container2:{margin: 13},
   form: { backgroundColor: '#fff', padding: 15, borderRadius: 10, elevation: 2 },
   label: { fontSize: 14, fontWeight: 'bold', marginTop: 10 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginTop: 5 },
   picker: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginTop: 5 },
   imageButton: { marginTop: 10, backgroundColor: '#04a4d4ff', padding: 10, borderRadius: 8, alignItems: 'center' },
   imageButtonText: { color: '#ffffffff', fontWeight: 'bold' },
-  previewImage: { height: 100, width: '100%', marginTop: 10, borderRadius: 8 },
+  previewImage: { width: 180, height: 180, marginTop: 10, borderRadius: 8 },
   saveButton: { marginTop: 15, backgroundColor: '#32CD32', padding: 12, borderRadius: 8, alignItems: 'center' },
   saveButtonText: { color: '#fff', fontWeight: 'bold' },
   cancelButton: { marginTop: 10, backgroundColor: '#FF8C00', padding: 12, borderRadius: 8, alignItems: 'center' },

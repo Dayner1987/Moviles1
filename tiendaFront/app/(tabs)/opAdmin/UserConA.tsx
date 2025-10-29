@@ -1,187 +1,288 @@
-// app/(tabs)/opAdmin/AdminHome.tsx
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import LottieView from "lottie-react-native";
+import React, { useState } from "react";
 import {
-  Image,
-  RefreshControl,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from 'react-native';
-import { CategoriaConProductos } from '../../data/categories';
-import { Producto } from '../../data/products';
-import { API } from '../../ip/IpDirection';
+  View,
+} from "react-native";
+import * as Animatable from "react-native-animatable";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useStatus } from "../../../hooks/UseStatus";
+import { API } from "../../ip/IpDirection";
 
 export default function UserConA() {
-  const [categorias, setCategorias] = useState<CategoriaConProductos[]>([]);
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [search, setSearch] = useState('');
+  const { user, setUser, loading } = useStatus();
+  const [editing, setEditing] = useState(false);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [form, setForm] = useState<any>({
+    Name1: "",
+    Name2: "",
+    LastName1: "",
+    LastName2: "",
+    CI: "",
+    Address: "",
+    Password: "",
+    Email: "",
+    Roles_RolesID: 0,
+    RoleName: "",
+  });
 
-  const fetchCategorias = async () => {
+  const router = useRouter();
+
+  // Función para cargar datos del usuario manualmente
+  const loadUserData = async () => {
+    if (!user) return;
+
     try {
-      const res = await fetch(`${API}/categories`);
+      const res = await fetch(`${API}/users/${user.id}`);
+      if (!res.ok) throw new Error("Error al obtener info del usuario");
       const data = await res.json();
-      const categoriasData: CategoriaConProductos[] = data.map((c: any) => ({
-        CategoriesID: c.CategoriesID,
-        Name_categories: c.Name_categories,
-        products: c.products?.map((p: any) => ({
-          ProductsID: p.ProductsID,
-          Name_product: p.Name_product,
-          Price: p.Price,
-          Description: p.Description,
-          Amount: p.Amount,
-          CategoryID: p.CategoryID,
-          imageUri: p.imageUri,
-        })) || [],
-      }));
-      setCategorias(categoriasData);
-    } catch (e) {
-      console.error('Error al obtener categorías:', e);
+
+      setForm({
+        Name1: data.Name1 || "",
+        Name2: data.Name2 || "",
+        LastName1: data.LastName1 || "",
+        LastName2: data.LastName2 || "",
+        CI: String(data.CI) || "",
+        Address: data.Address || "",
+        Password: "",
+        Email: data.Email || "",
+        Roles_RolesID: data.Roles_RolesID || 0,
+        RoleName: data.roles?.NameRol || "",
+      });
+    } catch (err) {
+      console.error(err);
+      setWarning("⚠️ No se pudo cargar la información del usuario");
     }
   };
 
-  useEffect(() => {
-    fetchCategorias();
-  }, []);
+  // Llamar loadUserData directamente si hay usuario y no estamos editando
+  if (user && !editing && form.CI === "") {
+    loadUserData();
+  }
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchCategorias();
-    setRefreshing(false);
+  const confirmLogout = () => {
+    Alert.alert(
+      "¿Seguro que quieres cerrar sesión?",
+      "Perderás el acceso hasta volver a iniciar sesión.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Sí, cerrar sesión", style: "destructive", onPress: handleLogout },
+      ],
+      { cancelable: true }
+    );
   };
 
-  const categoriasFiltradas = categorias
-    .map((categoria) => ({
-      ...categoria,
-      products: categoria.products.filter((p) =>
-        p.Name_product.toLowerCase().includes(search.toLowerCase())
-      ),
-    }))
-    .filter(
-      (categoria) =>
-        categoria.Name_categories.toLowerCase().includes(search.toLowerCase()) ||
-        categoria.products.length > 0
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem("token");
+    setUser(null);
+    setEditing(false);
+    Alert.alert("Sesión cerrada", "Has cerrado sesión correctamente");
+    router.push("/"); // Redirige al Home
+  };
+
+  const validateForm = () => {
+    if (!form.Name1 || !form.LastName1 || !form.CI || !form.Email) {
+      setWarning("⚠️ Faltan campos obligatorios");
+      return false;
+    }
+
+    if (isNaN(Number(form.CI))) {
+      setWarning("⚠️ El CI debe ser numérico");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleUpdate = async () => {
+    if (!user) return;
+    setWarning(null);
+
+    if (!validateForm()) return;
+
+    try {
+      const res = await fetch(`${API}/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.error?.includes("CI")) {
+          setWarning("⚠️ Este CI ya está registrado por otro usuario");
+        } else {
+          setWarning("⚠️ No se pudo actualizar la información");
+        }
+        return;
+      }
+
+      Alert.alert("Éxito", "Datos actualizados correctamente");
+      setEditing(false);
+      loadUserData();
+    } catch (err) {
+      console.error(err);
+      setWarning("⚠️ Error de conexión al actualizar usuario");
+    }
+  };
+
+  if (loading)
+    return <ActivityIndicator style={{ flex: 1 }} size="large" color="#6200EE" />;
+
+  if (!user)
+    return (
+      <View style={styles.center}>
+        <LottieView
+          source={require("../../../assets/fonts/Profile.json")}
+          autoPlay
+          loop
+          style={{ width: 200, height: 200 }}
+        />
+        <Text style={styles.message}>Necesitas iniciar sesión</Text>
+
+        <TouchableOpacity style={styles.button} onPress={() => router.push("/(tabs)/login")}>
+          <Text style={styles.buttonText}>Iniciar Sesión</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: "#999" }]}
+          onPress={() => router.push("/(tabs)/register")}
+        >
+          <Text style={styles.buttonText}>Registrarse</Text>
+        </TouchableOpacity>
+      </View>
     );
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
     >
-      {/* Buscador */}
-      <TextInput
-        placeholder="Buscar categorías o productos..."
-        style={styles.searchInput}
-        value={search}
-        onChangeText={setSearch}
-      />
-
-      {/* Lista de categorías */}
-      <View style={styles.categoriasContainer}>
-        {categoriasFiltradas.length > 0 ? (
-          categoriasFiltradas.map((categoria) => (
-            <TouchableOpacity
-              key={categoria.CategoriesID}
-              onPress={() =>
-                setCategoriaSeleccionada(
-                  categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
-                )
-              }
-              style={[
-                styles.categoriaItem,
-                categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
-              ]}
-            >
-              <Text
-                style={
-                  categoriaSeleccionada === categoria.CategoriesID
-                    ? styles.categoriaTextSeleccionada
-                    : styles.categoriaText
-                }
-              >
-                {categoria.Name_categories}
-              </Text>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <Text style={styles.noResults}>No se encontró nada...</Text>
-        )}
-      </View>
-
-      {/* Productos de la categoría seleccionada */}
-      {categoriaSeleccionada && (
-        <View style={styles.productosContainer}>
-          <Text style={styles.sectionTitle}>
-            Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
-          </Text>
-          {categorias
-            .find((c) => c.CategoriesID === categoriaSeleccionada)
-            ?.products.filter((p) =>
-              p.Name_product.toLowerCase().includes(search.toLowerCase())
-            )
-            .map((p: Producto) => (
-              <View key={p.ProductsID} style={styles.productoItem}>
-                {p.imageUri && (
-                  <Image
-                    source={{ uri: `${API}${p.imageUri.startsWith('/') ? '' : '/'}${p.imageUri}` }}
-                    style={{ width: '100%', height: 150, borderRadius: 6, marginBottom: 6 }}
-                  />
-                )}
-                <Text style={styles.productoNombre}>{p.Name_product}</Text>
-                <Text style={styles.productoDescripcion}>{p.Description}</Text>
-                <Text style={styles.productoCantidad}>Cantidad disponible: {p.Amount}</Text>
-                <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
-              </View>
-            ))}
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.lottieContainer}>
+          <LottieView
+            source={require("../../../assets/fonts/Profile.json")}
+            autoPlay
+            loop
+            style={{ width: 150, height: 150 }}
+          />
         </View>
-      )}
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2025 HairLux. Todos los derechos reservados.</Text>
-      </View>
-    </ScrollView>
+        <Text style={styles.title}>Información del Usuario</Text>
+
+        {warning && (
+          <Animatable.View animation="shake" duration={800} style={styles.warningBox}>
+            <Text style={styles.warningText}>
+              <MaterialIcons name="warning" size={18} color="#856404" /> {warning}
+            </Text>
+          </Animatable.View>
+        )}
+
+        {editing ? (
+          <>
+            {Object.keys(form).map(
+              (key) =>
+                key !== "RoleName" &&
+                key !== "Roles_RolesID" && (
+                  <View key={key} style={styles.inputContainer}>
+                    <Text style={styles.label}>{key}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form[key]}
+                      onChangeText={(text) => setForm({ ...form, [key]: text })}
+                      secureTextEntry={key === "Password"}
+                      keyboardType={key === "CI" ? "numeric" : "default"}
+                    />
+                  </View>
+                )
+            )}
+
+            <TouchableOpacity style={styles.button} onPress={handleUpdate}>
+              <Text style={styles.buttonText}>Guardar Cambios</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: "#999" }]}
+              onPress={() => setEditing(false)}
+            >
+              <Text style={styles.buttonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <View style={styles.infoContainer}>
+              <Text style={styles.infoText}>
+                Nombre: {form.Name1} {form.Name2}
+              </Text>
+              <Text style={styles.infoText}>
+                Apellido: {form.LastName1} {form.LastName2}
+              </Text>
+              <Text style={styles.infoText}>CI: {form.CI}</Text>
+              <Text style={styles.infoText}>Email: {form.Email}</Text>
+              <Text style={styles.infoText}>Dirección: {form.Address}</Text>
+              <Text style={styles.infoText}>Rol: {form.RoleName}</Text>
+            </View>
+
+            <TouchableOpacity style={styles.button} onPress={() => setEditing(true)}>
+              <Text style={styles.buttonText}>Actualizar Información</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: "#FF6347" }]}
+              onPress={confirmLogout}
+            >
+              <Text style={styles.buttonText}>Cerrar Sesión</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, marginTop: 20 },
-  searchInput: { marginTop: 15, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
-  categoriasContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 20 },
-  categoriaItem: { padding: 10, borderRadius: 8, margin: 5, backgroundColor: '#EDE7F6' },
-  categoriaSeleccionada: { backgroundColor: '#6200EE' },
-  categoriaText: { color: '#000', fontWeight: 'bold' },
-  categoriaTextSeleccionada: { color: '#fff', fontWeight: 'bold' },
-  productosContainer: { marginTop: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 10 },
-  productoItem: { padding: 12, borderRadius: 12, marginBottom: 10, backgroundColor: '#fff', elevation: 2 },
-  productoNombre: { fontWeight: 'bold' },
-  productoDescripcion: { fontStyle: 'italic', color: '#555' },
-  productoCantidad: { color: '#333', marginTop: 4 },
-  productoPrecio: { fontWeight: 'bold', marginTop: 4 },
-  noResults: { marginTop: 20, fontStyle: 'italic', color: '#555' },
-  footer: { marginTop: 30, alignItems: 'center', paddingVertical: 10 },
-  footerText: { fontSize: 12, color: '#888' },
-  botonesGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 20 },
-  boton: {
-    width: '48%',
-    height: 120,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+  container: { padding: 20, paddingBottom: 40, alignItems: "center" },
+  lottieContainer: { marginBottom: 20, alignItems: "center", justifyContent: "center" },
+  warningBox: {
+    backgroundColor: "#fff3cd",
+    borderColor: "#ffecb5",
+    borderWidth: 1,
+    borderRadius: 8,
     padding: 10,
+    marginBottom: 10,
+    width: "100%",
   },
-  botonImagen: { width: 50, height: 50, marginBottom: 8 },
-  botonTexto: { fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  warningText: { color: "#856404", textAlign: "center", fontWeight: "600" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  message: { fontSize: 18, fontWeight: "bold", color: "#555", marginBottom: 20, textAlign: "center" },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
+  infoContainer: { marginBottom: 20, width: "100%", alignItems: "center" },
+  infoText: { fontSize: 16, marginBottom: 8, textAlign: "center" },
+  inputContainer: { marginBottom: 12, width: "100%" },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 4 },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 6, padding: 10, fontSize: 16 },
+  button: {
+    backgroundColor: "#6200EE",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginVertical: 8,
+    width: 200,
+  },
+  buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16, textAlign: "center" },
 });

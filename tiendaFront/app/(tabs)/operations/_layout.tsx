@@ -17,11 +17,12 @@ export default function OperationsTabsLayout() {
         tabBarIcon: ({ color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
 
-          if (route.name === "EmployeeHome") iconName = "person";
+          if (route.name === "EmployeeHome") iconName = "home";
           else if (route.name === "Orders") iconName = "list-circle";
           else if (route.name === "OrderStatus") iconName = "time";
           else if (route.name === "Search") iconName = "search";
           else if (route.name === "UserConE") iconName = "person";
+
           else iconName = "ellipse";
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -45,10 +46,7 @@ export default function OperationsTabsLayout() {
         name="Search"
         options={{ title: "Buscar" }}
       />
-       <Tabs.Screen
-        name="UserConE"
-        options={{ title: "Usuario" }}
-      />
+<Tabs.Screen name="UserConE" options={{ title: "Perfil" }} />
     </Tabs>
   );
 }

@@ -145,7 +145,7 @@ export default function Payment() {
                 empresa?.QRImage ||
                 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PagoEnLocal',
             }}
-            style={{ width: 150, height: 150, marginTop: 10, borderRadius: 10 }}
+            style={{ width: 200, height: 200, marginTop: 40, borderRadius: 10 }}
           />
           {empresa?.Address && (
             <Text style={{ marginTop: 10, textAlign: 'center' }}>

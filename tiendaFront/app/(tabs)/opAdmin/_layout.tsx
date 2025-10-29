@@ -22,6 +22,7 @@ export default function AdminTabsLayout() {
           else if (route.name === "Company") iconName = "business";
           else if (route.name === "EarNings") iconName = "cash";
           else if (route.name === "UserConA") iconName = "person";
+    
           else iconName = "ellipse";
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -43,13 +44,10 @@ export default function AdminTabsLayout() {
         options={{ title: "Empresa" }}
       />
       <Tabs.Screen
-        name="Earnings"
+        name="EarNings"
         options={{ title: "Ganancias" }}
       />
-      <Tabs.Screen
-        name="UserConA"
-        options={{ title: "Usuario" }}
-      />
+     <Tabs.Screen name="UserConA" options={{ title: "Perfil" }} />
     </Tabs>
   );
 }

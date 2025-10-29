@@ -40,70 +40,70 @@ const upload = multer({ storage });
 ////////////////
 //JWT 
 ///////////
-// Login con JWT
+
+const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_aqui';
+
 app.post('/auth/login', async (req: Request, res: Response) => {
+  const { identifier, password } = req.body; // puede ser email o CI
+
+  if (!identifier || !password) {
+    return res.status(400).json({ message: 'Email/CI y contraseña son requeridos' });
+  }
+
   try {
-    const { identifier, password } = req.body;
-    if (!identifier || !password) return res.status(400).json({ error: 'Faltan datos' });
+    let user;
 
-    // Determinar si identifier es CI o Email
-    const ciNumber = Number(identifier);
-    const whereClause = !isNaN(ciNumber)
-      ? { CI: ciNumber }
-      : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)
-      ? { Email: identifier }
-      : null;
+    // Verificar si identifier es numérico (CI) o no (email)
+    if (/^\d+$/.test(identifier)) {
+      // Buscar por CI
+      user = await prisma.users.findUnique({
+        where: { CI: parseInt(identifier) },
+        include: { roles: true },
+      });
+    } else {
+      // Buscar por email
+      user = await prisma.users.findUnique({
+        where: { Email: identifier },
+        include: { roles: true },
+      });
+    }
 
-    if (!whereClause) return res.status(400).json({ error: 'ID o Email inválido' });
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
 
-    const user = await prisma.users.findFirst({ where: whereClause });
-    if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+    // Verificar contraseña
+    const isPasswordValid = await bcrypt.compare(password, user.Password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Contraseña incorrecta' });
+    }
 
-    const validPassword = await bcrypt.compare(password, user.Password);
-    if (!validPassword) return res.status(401).json({ error: 'Contraseña incorrecta' });
+    // Preparar payload JWT
+    const payload: JwtPayload = {
+      id: user.clientID,
+      role:
+        user.roles.RolesID === 1
+          ? 'cliente'
+          : user.roles.RolesID === 2
+          ? 'empleado'
+          : 'administrador',
+      name: `${user.Name1} ${user.LastName1}`,
+      email: user.Email,
+    };
 
-    // Determinar rol
-    let role = '';
-    if (user.Roles_RolesID === 1) role = 'Cliente';
-    else if (user.Roles_RolesID === 2) role = 'Empleado';
-    else if (user.Roles_RolesID === 3) role = 'Administrador';
+    // Generar token
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
 
-    // Generar JWT datos dentro del token
-    const token = jwt.sign(
-      {
-        id: user.clientID,
-        role,
-        name: user.Name1,
-        email: user.Email
-      },
-      'MI_SECRETO', // en producción usar process.env.JWT_SECRET token
-      { expiresIn: '1h' }
-    );
-
-    res.json({ token, id: user.clientID, role });
-
-  } catch (e: any) {
-    console.error(e);
-    res.status(500).json({ error: e.message });
+    res.json({
+      message: 'Autenticación exitosa',
+      token,
+      user: payload,
+    });
+  } catch (error) {
+    console.error('Error en /auth/login:', error);
+    res.status(500).json({ message: 'Error en el servidor' });
   }
 });
-///middleware rutas protegidas
-
-
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader?.split(' ')[1]; // Bearer <token>
-
-  if (!token) return res.status(401).json({ error: 'Token requerido' });
-
-  try {
-    const decoded = jwt.verify(token, 'MI_SECRETO') as JwtPayload;
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(403).json({ error: 'Token inválido' });
-  }
-};
 
 // ---------------------
 // CRUD EMPLEADOS (users)
@@ -183,48 +183,57 @@ app.post('/users', async (req: Request, res: Response) => {
   }
 });
 
+// Obtener un usuario por ID
+app.get('/users/:id', async (req: Request, res: Response) => {
+  try {
+    const clientID = parseInt(req.params.id);
+    if (isNaN(clientID)) return res.status(400).json({ error: 'ID inválido' });
 
+    const user = await prisma.users.findUnique({
+      where: { clientID },
+      include: { roles: true }, // Incluimos el rol
+    });
 
-// Listar USUARIOS
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Excluir siempre la contraseña
+    const { Password, ...safeUser } = user;
+
+    res.json(safeUser);
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+// Listar todos los usuarios
 app.get('/users', async (req: Request, res: Response) => {
   try {
     const users = await prisma.users.findMany({
-      include: { roles: true },
+      include: { roles: true }, // Incluye la relación roles
     });
-    res.json(users);
+
+    // Excluir Password
+    const safeUsers = users.map(({ Password, ...user }) => user);
+
+    res.json(safeUsers);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// ✅ Actualizar USUARIO
+// Actualizar usuario
 app.put('/users/:id', async (req: Request, res: Response) => {
   try {
     const clientID = parseInt(req.params.id);
-    if (isNaN(clientID)) {
-      return res.status(400).json({ error: "ID inválido" });
-    }
+    if (isNaN(clientID)) return res.status(400).json({ error: 'ID inválido' });
 
     const existingUser = await prisma.users.findUnique({ where: { clientID } });
-    if (!existingUser) {
-      return res.status(404).json({ error: "Usuario no encontrado" });
-    }
+    if (!existingUser) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    const {
-      Roles_RolesID,
-      Name1,
-      Name2,
-      LastName1,
-      LastName2,
-      CI,
-      Email,
-      Address,
-      Password,
-    } = req.body;
+    const { Roles_RolesID, Name1, Name2, LastName1, LastName2, CI, Email, Address, Password } = req.body;
 
-    // Hashear contraseña solo si se envía una nueva
     let hashedPassword = existingUser.Password;
-    if (Password && Password.trim() !== "") {
+    if (Password && Password.trim() !== '') {
       hashedPassword = await bcrypt.hash(Password, 10);
     }
 
@@ -236,54 +245,37 @@ app.put('/users/:id', async (req: Request, res: Response) => {
         Name2: Name2 ?? existingUser.Name2,
         LastName1: LastName1 ?? existingUser.LastName1,
         LastName2: LastName2 ?? existingUser.LastName2,
-        CI: CI ?? existingUser.CI,
+        CI: Number(CI) ?? existingUser.CI,
         Email: Email ?? existingUser.Email,
         Address: Address ?? existingUser.Address,
         Password: hashedPassword,
       },
     });
 
+    const { Password: _, ...safeUser } = updatedUser;
     res.json({
-      message: "Usuario actualizado correctamente",
-      user: updatedUser,
+      message: 'Usuario actualizado correctamente',
+      user: safeUser,
     });
   } catch (error: any) {
-    console.error("Error al actualizar usuario:", error);
+    console.error('Error al actualizar usuario:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Eliminar USUARIOS
+// Eliminar usuario
 app.delete('/users/:id', async (req: Request, res: Response) => {
-  try {
-    const clientID = parseInt(req.params.id);
-    await prisma.users.delete({ where: { clientID } });
-    res.json({ message: 'Empleado eliminado correctamente.' });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Obtener usuario por ID
-// backend /users/:id
-app.get('/users/:id', async (req: Request, res: Response) => {
   try {
     const clientID = parseInt(req.params.id);
     if (isNaN(clientID)) return res.status(400).json({ error: 'ID inválido' });
 
-    const user = await prisma.users.findUnique({
-      where: { clientID },
-      include: { roles: true },
-    });
-
-    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-
-    res.json(user); // <-- retorna user directamente
+    await prisma.users.delete({ where: { clientID } });
+    res.json({ message: 'Usuario eliminado correctamente.' });
   } catch (e: any) {
-    console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
+
 
 // ---------------------
 
@@ -373,15 +365,28 @@ app.delete('/categories/:id', async (req: Request, res: Response) => {
   try {
     const CategoriesID = parseInt(req.params.id);
 
+    const productos = await prisma.products.findMany({
+      where: { CategoryID: CategoriesID },
+    });
+
+    if (productos.length > 0) {
+      return res.status(400).json({
+        error: 'No se puede eliminar esta categoría porque tiene productos asociados.',
+      });
+    }
+
     await prisma.categories.delete({
-      where: { CategoriesID }
+      where: { CategoriesID },
     });
 
     res.json({ message: 'Categoría eliminada correctamente.' });
   } catch (e: any) {
+    console.error('Error al eliminar categoría:', e);
     res.status(500).json({ error: e.message });
   }
 });
+
+
 
 
 
@@ -647,26 +652,31 @@ app.get('/orders/:id', async (req: Request, res: Response) => {
   }
 });
 
-
-
 // PATCH /orders/:id/status
-app.patch('/orders/:id/status', async (req: Request, res: Response) => {
+app.patch("/orders/:id/status", async (req, res) => {
   const id = parseInt(req.params.id);
   const { estado } = req.body; // true o false
-  if (isNaN(id)) return res.status(400).json({ error: "ID inválido" });
 
   try {
-    const order = await prisma.orders.findUnique({ where: { OrdersID: id } });
-    if (!order) return res.status(404).json({ message: "Orden no encontrada" });
-
-    const updatedStatus = await prisma.order_status.update({
-      where: { idEstado: order.StatusOrderID },
-      data: { estado: Boolean(estado) },
+    const updated = await prisma.orders.update({
+      where: { OrdersID: id },
+      data: {
+        order_status: {
+          update: { estado },
+        },
+      },
+      include: {
+        order_status: true, // opcional, para devolver el nuevo estado
+      },
     });
 
-    res.json({ message: "Estado actualizado", status: updatedStatus });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.json({
+      message: "Estado actualizado correctamente",
+      estado: updated.order_status.estado,
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar estado:", error);
+    res.status(500).json({ error: "Error al actualizar el estado" });
   }
 });
 

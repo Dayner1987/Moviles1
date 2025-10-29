@@ -1,22 +1,18 @@
-// hooks/useCarrito.ts
 import { useEffect, useState } from 'react';
 import { Producto } from '../app/data/products';
 
-// Estado global para el carrito
-let carritoGlobal: Producto[] = [];
-let suscriptores: ((carrito: Producto[]) => void)[] = [];
+let carritoGlobal: (Producto & { cartId: string })[] = [];
+let suscriptores: ((carrito: (Producto & { cartId: string })[]) => void)[] = [];
 
 export const useCarrito = () => {
-  const [carrito, setCarrito] = useState<Producto[]>(carritoGlobal);
+  const [carrito, setCarrito] = useState<typeof carritoGlobal>(carritoGlobal);
 
-  // Notificar a todos los componentes
-  const notificarCambio = (nuevoCarrito: Producto[]) => {
+  const notificarCambio = (nuevoCarrito: typeof carritoGlobal) => {
     suscriptores.forEach(fn => fn(nuevoCarrito));
   };
 
-  // Suscribirse a los cambios
   useEffect(() => {
-    const suscriptor = (nuevoCarrito: Producto[]) => setCarrito([...nuevoCarrito]);
+    const suscriptor = (nuevoCarrito: typeof carritoGlobal) => setCarrito([...nuevoCarrito]);
     suscriptores.push(suscriptor);
 
     return () => {
@@ -24,22 +20,17 @@ export const useCarrito = () => {
     };
   }, []);
 
-  // ➕ Agregar producto
   const agregarAlCarrito = (producto: Producto) => {
-    const yaEnCarrito = carritoGlobal.some(item => item.ProductsID === producto.ProductsID);
-    if (!yaEnCarrito) {
-      carritoGlobal = [...carritoGlobal, producto];
-      notificarCambio(carritoGlobal);
-    }
-  };
-
-  // 🗑️ Eliminar producto
-  const eliminarDelCarrito = (id: number) => {
-    carritoGlobal = carritoGlobal.filter(item => item.ProductsID !== id);
+    const productoConId = { ...producto, cartId: `${producto.ProductsID}-${Date.now()}-${Math.random()}` };
+    carritoGlobal = [...carritoGlobal, productoConId];
     notificarCambio(carritoGlobal);
   };
 
-  // 🧹 Limpiar todo
+  const eliminarDelCarrito = (cartId: string) => {
+    carritoGlobal = carritoGlobal.filter(item => item.cartId !== cartId);
+    notificarCambio(carritoGlobal);
+  };
+
   const limpiarCarrito = () => {
     carritoGlobal = [];
     notificarCambio(carritoGlobal);

@@ -123,9 +123,9 @@ export default function Company() {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Gestión de Información de la Empresa</Text>
 
-      <TouchableOpacity style={styles.updateButton} onPress={loadCompany}>
+      {/*<TouchableOpacity style={styles.updateButton} onPress={loadCompany}>
         <Text style={styles.updateButtonText}>🔄 Actualizar información</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>*/}
 
       <MotiView
         from={{ opacity: 0, translateY: 20 }}

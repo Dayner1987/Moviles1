@@ -6,14 +6,14 @@ export type TabsStackParamList = {
   Register: undefined;
   ClientHome: undefined;
   EmployeeHome: undefined;
-  AdminHome: undefined;
 
-  UserConE: undefined;
+  UserConA:undefined;
   ManageProducts: undefined;
   Orders: undefined;
   Search: undefined;
   OrderStatus: undefined;
 
+   UserConE:undefined;
   NewProducts: undefined;
   NewUsers: undefined;
   EarNings: undefined;

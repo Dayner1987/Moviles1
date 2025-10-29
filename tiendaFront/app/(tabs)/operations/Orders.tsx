@@ -1,3 +1,4 @@
+//app/(tabs)/operations/Ordrs.tsx
 import { API } from "@/app/ip/IpDirection";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -7,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   Modal,
@@ -19,6 +21,8 @@ export default function Orders() {
   // Estados
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
 
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -26,7 +30,7 @@ export default function Orders() {
   const [carrito, setCarrito] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
 
-  const [showSuccess, setShowSuccess] = useState(false); // Modal Lottie
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // 🔹 Cargar usuarios
   useEffect(() => {
@@ -35,6 +39,7 @@ export default function Orders() {
         const res = await fetch(`${API}/users`);
         const data = await res.json();
         setUsers(data);
+        setFilteredUsers(data);
       } catch (error) {
         console.log("Error cargando usuarios");
       } finally {
@@ -43,6 +48,20 @@ export default function Orders() {
     };
     fetchUsers();
   }, []);
+
+  // 🔹 Filtrar usuarios
+  useEffect(() => {
+  const query = searchQuery.trim().toLowerCase();
+
+  const filtered = users.filter(u => {
+    const fullName = `${u.Name1} ${u.LastName1}`.toLowerCase();
+    const ciString = String(u.CI ?? ""); // convertimos CI a string para comparar correctamente
+    return fullName.includes(query) || ciString.includes(searchQuery.trim());
+  });
+
+  setFilteredUsers(filtered);
+}, [searchQuery, users]);
+
 
   // 🔹 Cargar categorías con productos
   useEffect(() => {
@@ -72,8 +91,7 @@ export default function Orders() {
 
   // 🔹 Confirmar orden
   const confirmarOrden = async () => {
-    if (!selectedUser) return;
-    if (carrito.length === 0) return;
+    if (!selectedUser || carrito.length === 0) return;
 
     try {
       const productos = carrito.map(p => ({
@@ -97,10 +115,10 @@ export default function Orders() {
       const data = await res.json();
       console.log("Orden creada:", data);
 
-      setShowSuccess(true); // mostrar modal Lottie
+      setShowSuccess(true);
       limpiarCarrito();
 
-      setTimeout(() => setShowSuccess(false), 2500); // cerrar modal automáticamente
+      setTimeout(() => setShowSuccess(false), 2500);
     } catch (error) {
       console.error("Error confirmando orden:", error);
     }
@@ -108,14 +126,7 @@ export default function Orders() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
-      {/* Navbar */}
-      <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>Nueva Orden</Text>
-      </View>
-
+      
       {/* Modal Lottie */}
       <Modal visible={showSuccess} transparent animationType="fade">
         <View style={styles.modalBackground}>
@@ -131,13 +142,21 @@ export default function Orders() {
         </View>
       </Modal>
 
-      {/* Selección de usuario */}
-      <Text style={styles.sectionTitle}>Seleccionar Cliente</Text>
+      {/* Buscador de Clientes */}
+      <Text style={styles.sectionTitle}>Buscar Cliente</Text>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Nombre o CI..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
+
+      {/* Lista de clientes */}
       {loadingUsers ? (
-        <ActivityIndicator size="large" color="#6200EE" style={{ marginVertical: 20 }} />
-      ) : (
+        <ActivityIndicator size="large" color="#6200EE" style={{ marginVertical: 25 }} />
+      ) : filteredUsers.length > 0 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-          {users.map(u => (
+          {filteredUsers.map(u => (
             <TouchableOpacity
               key={u.clientID}
               style={[styles.userBtn, selectedUser === u.clientID && styles.userSelected]}
@@ -148,66 +167,101 @@ export default function Orders() {
               </Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity
-            style={[styles.userBtn, styles.newUserBtn]}
-            onPress={() => router.push("/register")}
-          >
-            <Text style={styles.newUserText}>+ Nuevo Cliente</Text>
-          </TouchableOpacity>
         </ScrollView>
+      ) : (
+        <Text style={styles.noResults}>No se encontró ningún cliente</Text>
       )}
 
-      {/* Categorías */}
-      <Text style={styles.sectionTitle}>Categorías</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-        {categorias.map(c => (
-          <TouchableOpacity
-            key={c.CategoriesID}
-            style={[styles.categoryBtn, categoriaSeleccionada === c.CategoriesID && styles.categorySelected]}
-            onPress={() => setCategoriaSeleccionada(categoriaSeleccionada === c.CategoriesID ? null : c.CategoriesID)}
-          >
-            <Text style={categoriaSeleccionada === c.CategoriesID ? styles.categoryTextSelected : styles.categoryText}>
-              {c.Name_categories}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {/* Botón registrar cliente */}
+      <TouchableOpacity
+        style={styles.newUserBtnBottom}
+        onPress={() => router.push("/register")}
+      >
+        <Text style={styles.newUserText}>Registrar Nuevo Cliente</Text>
+      </TouchableOpacity>
+
+      {/* Lista de categorías */}
+      <View style={styles.categoriasContainer}>
+        {categorias.length > 0 ? (
+          categorias.map(categoria => (
+            <TouchableOpacity
+              key={categoria.CategoriesID}
+              onPress={() =>
+                setCategoriaSeleccionada(
+                  categoriaSeleccionada === categoria.CategoriesID ? null : categoria.CategoriesID
+                )
+              }
+              style={[
+                styles.categoriaItem,
+                categoriaSeleccionada === categoria.CategoriesID && styles.categoriaSeleccionada,
+              ]}
+            >
+              <Text
+                style={
+                  categoriaSeleccionada === categoria.CategoriesID
+                    ? styles.categoriaTextSeleccionada
+                    : styles.categoriaText
+                }
+              >
+                {categoria.Name_categories}
+              </Text>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Text style={styles.noResults}>No hay categorías...</Text>
+        )}
+      </View>
 
       {/* Productos */}
-      {categoriaSeleccionada &&
-        categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.products.map((p: any) => (
-          <View key={p.ProductsID} style={styles.productCard}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
-              {/* Imagen del producto */}
-              {p.imageUri && <Image source={{ uri: `${API}${p.imageUri}` }} style={styles.productImage} />}
-
-              {/* Datos del producto */}
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.productName}>{p.Name_product}</Text>
-                <Text style={styles.productPrice}>{p.Price} Bs</Text>
-                {p.Quantity !== undefined && <Text style={styles.productQuantity}>Cantidad: {p.Quantity}</Text>}
+      {categoriaSeleccionada && (
+        <View style={styles.productosContainer}>
+          <Text style={styles.sectionTitle}>
+            Productos de {categorias.find(c => c.CategoriesID === categoriaSeleccionada)?.Name_categories}
+          </Text>
+          {categorias
+            .find(c => c.CategoriesID === categoriaSeleccionada)
+            ?.products?.map((p: any) => (
+              <View key={p.ProductsID} style={styles.productoItem}>
+                <Image
+                  source={
+                    p.imageUri
+                      ? { uri: p.imageUri.startsWith("http") ? p.imageUri : `${API}${p.imageUri}`} 
+                      : require("../../../assets/images/noimg.png")
+                  }
+                  style={styles.productoImage}
+                />
+                <View style={styles.productoInfo}>
+                  <Text style={styles.productoNombre}>{p.Name_product}</Text>
+                  <Text style={styles.productoDescripcion}>{p.Description}</Text>
+                  <Text style={styles.productoCantidad}>Cantidad: {p.Amount}</Text>
+                  <Text style={styles.productoPrecio}>Precio: {p.Price} Bs</Text>
+                </View>
+                <TouchableOpacity onPress={() => handleBuy(p)}>
+                  <Image source={require("../../../assets/images/car.png")} style={styles.addImageBtn} />
+                </TouchableOpacity>
               </View>
-
-              {/* Botón como imagen a la derecha */}
-              <TouchableOpacity onPress={() => handleBuy(p)} style={{ padding: 5 }}>
-                <Image source={require("../../../assets/images/car.png")} style={styles.addImageBtn} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+            ))}
+        </View>
+      )}
 
       {/* Carrito */}
       <Text style={styles.sectionTitle}>Carrito</Text>
       {carrito.length === 0 ? (
-        <Text style={styles.emptyCartText}>Carrito vacío</Text>
-      ) : (
-        carrito.map(item => (
-          <View key={item.ProductsID} style={styles.cartItem}>
-            {item.imageUri && <Image source={{ uri: `${API}${item.imageUri}` }} style={styles.cartImage} />}
-            <Text style={{ flex: 1, marginLeft: 10 }}>{item.Name_product} - {item.Price} Bs</Text>
-          </View>
-        ))
-      )}
+        <View style={{ alignItems: "center", marginVertical: 20 }}>
+          <LottieView
+            source={require("../../../assets/fonts/carrito.json")}
+            autoPlay
+            loop
+            style={{ width: 250, height: 250 }}
+          />
+          <Text style={{ color: "#666", fontStyle: "italic" }}>Carrito vacío !</Text>
+        </View>
+      ) :carrito.map((item, index) => (
+  <View key={`${item.ProductsID}-${index}`} style={styles.cartItem}>
+    {item.imageUri && <Image source={{ uri: `${API}${item.imageUri}` }} style={styles.cartImage} />}
+    <Text style={{ flex: 1, marginLeft: 10 }}>{item.Name_product} - {item.Price} Bs</Text>
+  </View>
+))}
 
       {carrito.length > 0 && (
         <View style={styles.cartFooter}>
@@ -226,28 +280,21 @@ export default function Orders() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5", paddingTop: 20 },
-
-  navbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 15,
-    backgroundColor: "#fff",
-    marginHorizontal: 10,
-    marginBottom: 10,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  backBtn: { marginRight: 10 },
-  backText: { fontSize: 22 },
-  navTitle: { fontSize: 18, fontWeight: "bold", color: "#6200EE" },
-
+  container2:{margin: 10},
+  
   sectionTitle: { fontSize: 16, fontWeight: "bold", marginHorizontal: 15, marginVertical: 10, color: "#333" },
-  horizontalScroll: { paddingHorizontal: 10 },
 
+  searchInput: {
+    marginHorizontal: 15,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+
+  horizontalScroll: { paddingHorizontal: 10 },
   userBtn: {
     padding: 12,
     backgroundColor: "#fff",
@@ -262,41 +309,43 @@ const styles = StyleSheet.create({
   userSelected: { backgroundColor: "#6200EE" },
   userText: { color: "#000", fontWeight: "500" },
   userTextSelected: { color: "#fff", fontWeight: "600" },
-  newUserBtn: { backgroundColor: "#4CAF50" },
-  newUserText: { color: "#fff", fontWeight: "bold" },
-
-  categoryBtn: {
+  newUserBtnBottom: {
+    backgroundColor: "#4CAF50",
+    marginHorizontal: 15,
     padding: 12,
+    borderRadius: 15,
+    marginVertical: 10,
+    marginTop:10
+  },
+  newUserText: { color: "#fff", fontWeight: "bold", textAlign: "center" },
+
+  categoriasContainer: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: 15, marginBottom: 10 },
+  categoriaItem: {
+    padding: 10,
     backgroundColor: "#fff",
     borderRadius: 15,
     marginRight: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    marginBottom: 10,
   },
-  categorySelected: { backgroundColor: "#6200EE" },
-  categoryText: { color: "#000", fontWeight: "500" },
-  categoryTextSelected: { color: "#fff", fontWeight: "600" },
+  categoriaSeleccionada: { backgroundColor: "#6200EE" },
+  categoriaText: { color: "#000" },
+  categoriaTextSeleccionada: { color: "#fff", fontWeight: "bold" },
 
-  productCard: {
+  productosContainer: { marginHorizontal: 15 },
+  productoItem: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    marginHorizontal: 15,
-    marginVertical: 7,
     borderRadius: 10,
     padding: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    marginBottom: 10,
+    alignItems: "center",
   },
-  productImage: { width: 60, height: 60, borderRadius: 8 },
-  productName: { fontSize: 14, fontWeight: "bold", marginBottom: 4 },
-  productPrice: { color: "#4CAF50", marginBottom: 6 },
-  productQuantity: { fontSize: 12, color: "#666" },
+  productoImage: { width: 60, height: 60, borderRadius: 8 },
+  productoInfo: { flex: 1, marginLeft: 10 },
+  productoNombre: { fontWeight: "bold", fontSize: 14 },
+  productoDescripcion: { fontSize: 12, color: "#666" },
+  productoCantidad: { fontSize: 12, color: "#666" },
+  productoPrecio: { fontWeight: "bold", color: "#4CAF50" },
   addImageBtn: { width: 35, height: 35 },
 
   cartItem: {
@@ -314,8 +363,6 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cartImage: { width: 40, height: 40, borderRadius: 5 },
-  emptyCartText: { marginHorizontal: 20, fontStyle: "italic", color: "#666" },
-
   cartFooter: { flexDirection: "row", alignItems: "center", marginHorizontal: 15, marginVertical: 15 },
   totalText: { flex: 1, fontWeight: "bold", fontSize: 16, color: "#333" },
   clearBtn: { backgroundColor: "#f44336", padding: 10, borderRadius: 10, marginRight: 10 },
@@ -325,6 +372,8 @@ const styles = StyleSheet.create({
 
   modalBackground: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   lottieContainer: { backgroundColor: "#fff", padding: 20, borderRadius: 20, alignItems: "center" },
-  lottie: { width: 250, height: 250, marginBottom: 20, borderRadius: 75, borderWidth: 3, borderColor: "#6200EE" },
+  lottie: { width: 250, height: 250, marginBottom: 20 },
   lottieText: { fontSize: 18, fontWeight: "bold", color: "#6200EE" },
+
+  noResults: { textAlign: "center", color: "#666", marginVertical: 10 },
 });
